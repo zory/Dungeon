@@ -1,0 +1,94 @@
+###################
+# Git LFS variant #
+###################
+* text=auto
+
+# Images #
+##########
+*.jpg filter=lfs diff=lfs merge=lfs binary
+*.jpeg filter=lfs diff=lfs merge=lfs binary
+*.tga filter=lfs diff=lfs merge=lfs binary
+*.png filter=lfs diff=lfs merge=lfs binary
+*.gif filter=lfs diff=lfs merge=lfs binary
+*.bmp filter=lfs diff=lfs merge=lfs binary
+*.psd filter=lfs diff=lfs merge=lfs binary
+*.tif filter=lfs diff=lfs merge=lfs binary
+*.tiff filter=lfs diff=lfs merge=lfs binary
+*.exr filter=lfs diff=lfs merge=lfs binary
+*.ai filter=lfs diff=lfs merge=lfs binary
+
+# Three Dimensional #
+#####################
+*.fbx filter=lfs diff=lfs merge=lfs binary
+*.max filter=lfs diff=lfs merge=lfs binary
+*.3ds filter=lfs diff=lfs merge=lfs binary
+*.obj filter=lfs diff=lfs merge=lfs binary
+*.blend filter=lfs diff=lfs merge=lfs binary
+
+# Audio #
+#########
+*.mp3 filter=lfs diff=lfs merge=lfs binary
+*.wav filter=lfs diff=lfs merge=lfs binary
+*.ogg filter=lfs diff=lfs merge=lfs binary
+*.wma filter=lfs diff=lfs merge=lfs binary
+
+# Video #
+#########
+*.mp4 filter=lfs diff=lfs merge=lfs binary
+*.mov filter=lfs diff=lfs merge=lfs binary
+
+# Font #
+########
+*.otf filter=lfs diff=lfs merge=lfs binary
+*.ttf filter=lfs diff=lfs merge=lfs binary
+*.ttc filter=lfs diff=lfs merge=lfs binary
+*.pfb filter=lfs diff=lfs merge=lfs binary
+*.pfm filter=lfs diff=lfs merge=lfs binary
+*.dfont filter=lfs diff=lfs merge=lfs binary
+*.pfa filter=lfs diff=lfs merge=lfs binary
+*.afm filter=lfs diff=lfs merge=lfs binary
+
+# Compressions #
+################
+*.zip filter=lfs diff=lfs merge=lfs binary
+
+# Document text #
+#################
+*.odt filter=lfs diff=lfs merge=lfs binary
+*.pdf filter=lfs diff=lfs merge=lfs binary
+
+# Code, plugin, development etc. #
+##################################
+*.exe binary
+*.dll binary
+*.winmd binary
+*.so binary
+*.pdb binary
+*.pri binary
+*.pfx binary
+*.jar binary
+*.xbf binary
+*.exp binary
+*.lib binary
+*.iobj binary
+*.mdb binary
+*.keystore binary
+*.aar binary
+*.bundle binary
+*.a binary
+*.plist binary
+*.vsix binary
+
+#NavMesh is always binary, regardless of metadata settings
+*NavMesh.asset binary
+
+#Lighning data is always binary
+*LightingData.asset binary
+
+# Plugin Specific #
+###################
+*.dll_* binary
+*inklecate_mac binary
+Assets/AssetBundles/** filter=lfs diff=lfs merge=lfs -text
+
+*.meta text

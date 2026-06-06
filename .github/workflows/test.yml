@@ -1,0 +1,98 @@
+name: Run Unity Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run Edit and Play Mode Tests (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          submodules: recursive
+
+      # Cache the Unity Library to speed up subsequent runs.
+      # Note: action/cache v4 is current + recommended.
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Dungeon/Library
+          key: Library-${{ runner.os }}-${{ hashFiles('Dungeon/Assets/**', 'Dungeon/Packages/**', 'Dungeon/ProjectSettings/**') }}
+          restore-keys: |
+            Library-${{ runner.os }}-
+            Library-
+
+      # Unity version: keep what your project currently uses.
+      # If you want to change Unity versions, do it intentionally and test locally first.
+      - name: Run EditMode tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: 6000.4.7f1
+          testMode: editmode
+          artifactsPath: artifacts/editmode
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          projectPath: Dungeon
+          coverageOptions: ''
+
+      - name: Run PlayMode tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: 6000.4.7f1
+          testMode: playmode
+          artifactsPath: artifacts/playmode
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          projectPath: Dungeon
+          coverageOptions: ''
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Test Results
+          path: artifacts/
+
+      - name: Notify Discord
+        if: always()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        shell: bash
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            COLOR=3066993
+            STATUS="✅ Tests Passed"
+          else
+            COLOR=15158332
+            STATUS="❌ Tests Failed"
+          fi
+
+          curl -H "Content-Type: application/json" \
+          -d "{
+            \"embeds\": [{
+              \"title\": \"$STATUS\",
+              \"color\": $COLOR,
+              \"fields\": [
+                {\"name\": \"Repository\", \"value\": \"${{ github.repository }}\", \"inline\": true},
+                {\"name\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"inline\": true},
+                {\"name\": \"Commit\", \"value\": \"[${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})\", \"inline\": false},
+                {\"name\": \"Run\", \"value\": \"[View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\", \"inline\": false}
+              ]
+            }]
+          }" \
+          $DISCORD_WEBHOOK
