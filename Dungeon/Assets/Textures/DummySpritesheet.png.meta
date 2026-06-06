@@ -1,0 +1,653 @@
+fileFormatVersion: 2
+guid: bf4dd95e980916a4cbd625a7a3f71541
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 5836805031258693836
+    second: DummySpritesheet_0
+  - first:
+      213: -4494362546992464206
+    second: DummySpritesheet_1
+  - first:
+      213: 1380506089738680286
+    second: DummySpritesheet_2
+  - first:
+      213: 2443170811695611658
+    second: DummySpritesheet_3
+  - first:
+      213: -6742050964338061805
+    second: DummySpritesheet_4
+  - first:
+      213: -5626455048618196623
+    second: DummySpritesheet_5
+  - first:
+      213: -1958788462886709936
+    second: DummySpritesheet_6
+  - first:
+      213: 2120949291653584605
+    second: DummySpritesheet_7
+  - first:
+      213: -6439268362351284383
+    second: DummySpritesheet_8
+  - first:
+      213: 2082278566358630859
+    second: DummySpritesheet_9
+  - first:
+      213: 5932261406668690863
+    second: DummySpritesheet_10
+  - first:
+      213: 3158252586082373916
+    second: DummySpritesheet_11
+  - first:
+      213: 948681904090682700
+    second: DummySpritesheet_12
+  - first:
+      213: 3978313973576902244
+    second: DummySpritesheet_13
+  - first:
+      213: -7410202485257028728
+    second: DummySpritesheet_14
+  - first:
+      213: 5745651627917245481
+    second: DummySpritesheet_15
+  - first:
+      213: 7494766139088318851
+    second: DummySpritesheet_16
+  - first:
+      213: -6316109310689986881
+    second: DummySpritesheet_17
+  - first:
+      213: -6099928485474399745
+    second: DummySpritesheet_18
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 64
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: DummyCell_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 264
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 816c0daf68c751d41bd091c4a4c38590
+      internalID: 627461089
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_1
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 264
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b1584419920eb114dacf98b12e640d8d
+      internalID: 860694741
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_2
+      rect:
+        serializedVersion: 2
+        x: 132
+        y: 264
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f882bdc1e0a6b8c43bf4137071539c06
+      internalID: -975291515
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_3
+      rect:
+        serializedVersion: 2
+        x: 198
+        y: 264
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7fd5f0922e61b6348b9d4d799ec788fb
+      internalID: -1232314016
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_4
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 198
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8bdcfafc7d3340948b2dfcfd65a5fac4
+      internalID: -1079725847
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_5
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 198
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 65096cb9c9d513b42b4f8b42fda5671b
+      internalID: 549608343
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_6
+      rect:
+        serializedVersion: 2
+        x: 132
+        y: 198
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0500ab5fb26864740955ff67d70bfb8d
+      internalID: -2092213538
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_7
+      rect:
+        serializedVersion: 2
+        x: 198
+        y: 198
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 88dafe4820c464248a9b1e23b951d4a3
+      internalID: 182745945
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_8
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 132
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9896f2a2696e0904ab7783a0a3a94cf4
+      internalID: -698928349
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_9
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 132
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 93d420ee7bc877a44be12d3921d80535
+      internalID: 1831179156
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_10
+      rect:
+        serializedVersion: 2
+        x: 132
+        y: 132
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d9f3a69c44712ca43961b8d0c02dca3c
+      internalID: 1241524878
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_11
+      rect:
+        serializedVersion: 2
+        x: 198
+        y: 132
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a1798eee41fed47498df3fbae300c083
+      internalID: 379898853
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_12
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 66
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 487358df193a2104cbb7464f8de264b1
+      internalID: -670143903
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_13
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 66
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0dca4fb3125f0ff428719bab4900ac00
+      internalID: 604719591
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_14
+      rect:
+        serializedVersion: 2
+        x: 132
+        y: 66
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c9a1d4eaa8c694e48a47e8aa4c51a5d5
+      internalID: -219097846
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_15
+      rect:
+        serializedVersion: 2
+        x: 198
+        y: 66
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2e796e7e6ed778047af5b3cd4e81f8dd
+      internalID: -342954325
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_16
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f34e79dc4881a9c4c9deb5a74faa78fd
+      internalID: 648662687
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_17
+      rect:
+        serializedVersion: 2
+        x: 66
+        y: 0
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 23fa80ad74cfa524b971150785dbdb24
+      internalID: 533650322
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_18
+      rect:
+        serializedVersion: 2
+        x: 132
+        y: 0
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 41268ab35c9a6ce488be75227fd6f0c0
+      internalID: 548342902
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: DummyCell_19
+      rect:
+        serializedVersion: 2
+        x: 198
+        y: 0
+        width: 64
+        height: 64
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4895b08971d1c9c419a9fd65c37e952d
+      internalID: -1794918302
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 6f46e44ee12d3cb4b89963b6dbb1c5f6
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      DummyCell_0: 627461089
+      DummyCell_1: 860694741
+      DummyCell_10: 1241524878
+      DummyCell_11: 379898853
+      DummyCell_12: -670143903
+      DummyCell_13: 604719591
+      DummyCell_14: -219097846
+      DummyCell_15: -342954325
+      DummyCell_16: 648662687
+      DummyCell_17: 533650322
+      DummyCell_18: 548342902
+      DummyCell_19: -1794918302
+      DummyCell_2: -975291515
+      DummyCell_3: -1232314016
+      DummyCell_4: -1079725847
+      DummyCell_5: 549608343
+      DummyCell_6: -2092213538
+      DummyCell_7: 182745945
+      DummyCell_8: -698928349
+      DummyCell_9: 1831179156
+      DummySpritesheet_0: 5836805031258693836
+      DummySpritesheet_1: -4494362546992464206
+      DummySpritesheet_10: 5932261406668690863
+      DummySpritesheet_11: 3158252586082373916
+      DummySpritesheet_12: 948681904090682700
+      DummySpritesheet_13: 3978313973576902244
+      DummySpritesheet_14: -7410202485257028728
+      DummySpritesheet_15: 5745651627917245481
+      DummySpritesheet_16: 7494766139088318851
+      DummySpritesheet_17: -6316109310689986881
+      DummySpritesheet_18: -6099928485474399745
+      DummySpritesheet_2: 1380506089738680286
+      DummySpritesheet_3: 2443170811695611658
+      DummySpritesheet_4: -6742050964338061805
+      DummySpritesheet_5: -5626455048618196623
+      DummySpritesheet_6: -1958788462886709936
+      DummySpritesheet_7: 2120949291653584605
+      DummySpritesheet_8: -6439268362351284383
+      DummySpritesheet_9: 2082278566358630859
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

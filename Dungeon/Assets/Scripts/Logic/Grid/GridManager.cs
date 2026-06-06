@@ -7,6 +7,10 @@ namespace Dungeon.Logic
     // Visuals layer subscribes to the events; this class holds no rendering logic.
     public class GridManager : MonoBehaviour
     {
+        // The one Grid instance for the scene — owned here so all MonoBehaviours
+        // can reach it via a single inspector reference to GridManager.
+        public Grid Grid { get; } = new Grid();
+
         public Vector3Int? HoveredCell          { get; private set; }
         public Vector3Int? SelectedCell         { get; private set; }
         public Vector3Int? PreviousSelectedCell { get; private set; }

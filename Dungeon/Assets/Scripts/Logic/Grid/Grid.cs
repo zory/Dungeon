@@ -19,6 +19,8 @@ namespace Dungeon.Logic
 
         public IEnumerable<Vector3Int> GetAllCoordinates() => _cells.Keys;
 
+        public void Clear() => _cells.Clear();
+
         public int Count => _cells.Count;
     }
 }
