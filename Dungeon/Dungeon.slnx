@@ -4,5 +4,6 @@
   <Project Path="FactorialFun.Core.csproj" />
   <Project Path="FactorialFun.Core.Editor.csproj" />
   <Project Path="Dungeon.Tests.EditMode.csproj" />
+  <Project Path="Dungeon.Visuals.csproj" />
   <Project Path="Dungeon.Tests.PlayMode.csproj" />
 </Solution>
