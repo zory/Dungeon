@@ -22,7 +22,12 @@ namespace Dungeon.Visuals
         [SerializeField] private Color _lineColor = new Color(1f, 1f, 1f, 0.5f);
 
         private Material _lineMaterial;
-        private float WorldY => transform.position.y + _yLevel;
+
+        public float WorldY   => transform.position.y + _yLevel;
+        public float CellSize => _cellSize;
+        public Vector2 XZOffset => _xzOffset;
+        // Which elevation layer this grid plane sits on in grid-space coordinates
+        public int ElevationLayer => Mathf.FloorToInt(WorldY / _cellSize);
 
         private void Awake()
         {

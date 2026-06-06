@@ -2,6 +2,7 @@
     "name": "Dungeon.Visuals",
     "rootNamespace": "Dungeon.Visuals",
     "references": [
+        "Unity.InputSystem",
         "Dungeon.Logic"
     ],
     "includePlatforms": [],
