@@ -13,7 +13,8 @@ namespace Dungeon.Visuals
         [SerializeField] private WorldGenerator _worldGenerator;
 
         [Header("Sprite Sheet")]
-        [SerializeField] private Material _material;
+        [SerializeField] private Material      _material;
+        [SerializeField] private TileRegistry  _tileRegistry;
         [SerializeField] private int _sheetColumns = 8;
         [SerializeField] private int _sheetRows    = 8;
 
@@ -66,7 +67,7 @@ namespace Dungeon.Visuals
 
             var chunk = go.AddComponent<ChunkRenderer>();
             go.GetComponent<MeshRenderer>().sharedMaterial = _material;
-            chunk.Build(chunkCoord, _gridManager, _gridRenderer, _sheetColumns, _sheetRows);
+            chunk.Build(chunkCoord, _gridManager, _gridRenderer, _tileRegistry, _sheetColumns, _sheetRows);
 
             _chunks[chunkCoord] = chunk;
         }

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d8703f8c397bae4f93c76fd8e76ccc0, type: 3}
+  m_Name: TileRegistry
+  m_EditorClassIdentifier: Dungeon.Visuals::Dungeon.Visuals.TileRegistry
+  _entries:
+  - TileType: 0
+    SheetIndex: 0
+  - TileType: 1
+    SheetIndex: 4
+  - TileType: 2
+    SheetIndex: 3
+  - TileType: 3
+    SheetIndex: 2
+  - TileType: 4
+    SheetIndex: 18
+  - TileType: 5
+    SheetIndex: 9
+  - TileType: 6
+    SheetIndex: 14

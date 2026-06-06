@@ -3,13 +3,14 @@ using UnityEngine;
 
 namespace Dungeon.Logic
 {
-    // Populates the Grid with an initial flat world of the given dimensions.
-    // Runs at execution order -10 so the grid is filled before WorldRenderer's Start.
-    // Subclass and override GetTileId to implement custom generation rules.
+    // Populates the Grid by asking a WorldDataSource for each cell's tile ID.
+    // Swap the data source to change generation strategy (procedural, save file, etc.).
+    // Runs at execution order -10 so the grid is ready before WorldRenderer's Start.
     [DefaultExecutionOrder(-10)]
     public class WorldGenerator : MonoBehaviour
     {
-        [SerializeField] private GridManager _gridManager;
+        [SerializeField] private GridManager    _gridManager;
+        [SerializeField] private WorldDataSource _dataSource;
 
         [Header("World Dimensions (in cells)")]
         [SerializeField] private int _widthInCells  = 128;
@@ -32,12 +33,12 @@ namespace Dungeon.Logic
 
             for (int x = _originX; x < _originX + _widthInCells;  x++)
             for (int z = _originZ; z < _originZ + _lengthInCells; z++)
-                grid.SetCell(new Vector3Int(x, _elevation, z), new Cell(GetTileId(x, _elevation, z)));
+            {
+                int tileId = _dataSource != null ? _dataSource.GetTileId(x, _elevation, z) : 0;
+                grid.SetCell(new Vector3Int(x, _elevation, z), new Cell(tileId));
+            }
 
             OnWorldGenerated?.Invoke();
         }
-
-        // Override in subclasses to assign per-cell tile IDs during generation.
-        protected virtual int GetTileId(int x, int y, int z) => 0;
     }
 }
