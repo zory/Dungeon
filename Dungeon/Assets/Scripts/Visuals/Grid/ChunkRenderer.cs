@@ -9,7 +9,7 @@ namespace Dungeon.Visuals
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
     public class ChunkRenderer : MonoBehaviour
     {
-        public const int ChunkSize = 64;
+        public const int ChunkSize = Dungeon.Logic.WorldConstants.ChunkSize;
 
         private Mesh _mesh;
 

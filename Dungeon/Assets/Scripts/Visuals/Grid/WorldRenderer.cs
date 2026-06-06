@@ -4,45 +4,45 @@ using UnityEngine;
 
 namespace Dungeon.Visuals
 {
-    // Listens for WorldGenerator.OnWorldGenerated and spawns one ChunkRenderer
-    // per occupied chunk in the Grid.
+    // Renders chunks as they are generated.
+    // Listens to WorldGenerator.OnWorldGenerated (finite/pre-built worlds)
+    // and ChunkLoader.OnChunksLoaded (infinite streaming) — both can be active at once.
     public class WorldRenderer : MonoBehaviour
     {
         [SerializeField] private GridManager    _gridManager;
         [SerializeField] private GridRenderer   _gridRenderer;
-        [SerializeField] private WorldGenerator _worldGenerator;
+        [SerializeField] private WorldGenerator _worldGenerator; // optional: finite pre-built world
+        [SerializeField] private ChunkLoader    _chunkLoader;    // optional: infinite streaming
 
         [Header("Sprite Sheet")]
-        [SerializeField] private Material      _material;
-        [SerializeField] private TileRegistry  _tileRegistry;
-        [SerializeField] private int _sheetColumns = 8;
-        [SerializeField] private int _sheetRows    = 8;
+        [SerializeField] private Material     _material;
+        [SerializeField] private TileRegistry _tileRegistry;
+        [SerializeField] private int          _sheetColumns = 8;
+        [SerializeField] private int          _sheetRows    = 8;
 
         private readonly Dictionary<Vector2Int, ChunkRenderer> _chunks = new();
-        private bool _built;
 
         private void OnEnable()
         {
             if (_worldGenerator != null)
-                _worldGenerator.OnWorldGenerated += RebuildAll;
+                _worldGenerator.OnWorldGenerated += OnWorldGenerated;
+
+            if (_chunkLoader != null)
+                _chunkLoader.OnChunksLoaded += OnChunksLoaded;
         }
 
         private void OnDisable()
         {
             if (_worldGenerator != null)
-                _worldGenerator.OnWorldGenerated -= RebuildAll;
+                _worldGenerator.OnWorldGenerated -= OnWorldGenerated;
+
+            if (_chunkLoader != null)
+                _chunkLoader.OnChunksLoaded -= OnChunksLoaded;
         }
 
-        private void Start()
+        // WorldGenerator fired: rebuild everything in the grid from scratch
+        private void OnWorldGenerated()
         {
-            // Fallback: if WorldGenerator already fired before we subscribed, build now.
-            if (!_built && _gridManager.Grid.Count > 0)
-                RebuildAll();
-        }
-
-        private void RebuildAll()
-        {
-            _built = true;
             ClearChunks();
 
             var occupied = new HashSet<Vector2Int>();
@@ -53,8 +53,17 @@ namespace Dungeon.Visuals
                 SpawnChunk(chunkCoord);
         }
 
+        // ChunkLoader fired: add only the new chunks, skip already-rendered ones
+        private void OnChunksLoaded(IReadOnlyList<Vector2Int> newChunks)
+        {
+            foreach (var chunkCoord in newChunks)
+                SpawnChunk(chunkCoord);
+        }
+
         private void SpawnChunk(Vector2Int chunkCoord)
         {
+            if (_chunks.ContainsKey(chunkCoord)) return; // already rendered
+
             float cs            = _gridRenderer.CellSize;
             float chunkWorldLen = ChunkRenderer.ChunkSize * cs;
 
