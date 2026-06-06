@@ -1,0 +1,3 @@
+[submodule "Submodules/FactorialFunShared"]
+	path = Submodules/FactorialFunShared
+	url = git@github.com:zory/FactorialFunShared.git

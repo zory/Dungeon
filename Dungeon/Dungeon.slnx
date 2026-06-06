@@ -1,0 +1,5 @@
+﻿<Solution>
+  <Project Path="FactorialFun.Core.UI.csproj" />
+  <Project Path="FactorialFun.Core.csproj" />
+  <Project Path="FactorialFun.Core.Editor.csproj" />
+</Solution>
