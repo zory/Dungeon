@@ -1,0 +1,16 @@
+{
+    "name": "Dungeon.Visuals",
+    "rootNamespace": "Dungeon.Visuals",
+    "references": [
+        "Dungeon.Logic"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

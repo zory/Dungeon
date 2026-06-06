@@ -1,0 +1,17 @@
+{
+    "name": "Dungeon.UI",
+    "rootNamespace": "Dungeon.UI",
+    "references": [
+        "Dungeon.Logic",
+        "Dungeon.Visuals"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
