@@ -81,6 +81,41 @@ namespace Dungeon.Visuals
             _chunks[chunkCoord] = chunk;
         }
 
+        // Rebuilds a single chunk's mesh from the current grid state.
+        // If the chunk has not been spawned yet it is created.
+        // Called by EditorToolController after painting or erasing a cell.
+        public void RebuildChunk(Vector2Int chunkCoord)
+        {
+            if (_chunks.TryGetValue(chunkCoord, out ChunkRenderer existing))
+            {
+                // Rebuild mesh in place — avoids destroying / re-creating the GameObject.
+                existing.Build(chunkCoord, _gridManager, _gridRenderer, _tileRegistry, _sheetColumns, _sheetRows);
+            }
+            else
+            {
+                SpawnChunk(chunkCoord);
+            }
+        }
+
+        // Destroys all chunk GameObjects and respawns only the chunks that have cells
+        // at the currently active elevation layer.  Call after loading a level or switching elevation.
+        public void RebuildAll()
+        {
+            int elevation = _gridRenderer.ElevationLayer;
+
+            var occupiedChunks = new HashSet<Vector2Int>();
+            foreach (Vector3Int coord in _gridManager.Grid.GetAllCoordinates())
+            {
+                if (coord.y == elevation)
+                    occupiedChunks.Add(CellToChunk(coord.x, coord.z));
+            }
+
+            ClearChunks();
+
+            foreach (Vector2Int chunkCoord in occupiedChunks)
+                SpawnChunk(chunkCoord);
+        }
+
         private void ClearChunks()
         {
             foreach (var chunk in _chunks.Values)

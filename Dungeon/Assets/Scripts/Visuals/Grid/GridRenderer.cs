@@ -23,11 +23,19 @@ namespace Dungeon.Visuals
 
         private Material _lineMaterial;
 
-        public float WorldY   => transform.position.y + _yLevel;
-        public float CellSize => _cellSize;
-        public Vector2 XZOffset => _xzOffset;
+        public float   WorldY        => transform.position.y + _yLevel;
+        public float   CellSize      => _cellSize;
+        public Vector2 XZOffset      => _xzOffset;
         // Which elevation layer this grid plane sits on in grid-space coordinates
-        public int ElevationLayer => Mathf.FloorToInt(WorldY / _cellSize);
+        public int     ElevationLayer => Mathf.FloorToInt(WorldY / _cellSize);
+
+        // Moves the grid plane to the given elevation layer.
+        // Assumes this transform's Y stays at 0; if not, offset is still correct because
+        // WorldY = transform.position.y + _yLevel and ElevationLayer = floor(WorldY / cellSize).
+        public void SetElevation(int elevation)
+        {
+            _yLevel = elevation * _cellSize;
+        }
 
         private void Awake()
         {

@@ -1,0 +1,664 @@
+{
+    "Metadata": {
+        "Name": "unnamed",
+        "Version": 1
+    },
+    "Cells": [
+        {
+            "X": 60,
+            "Y": 0,
+            "Z": 58,
+            "TileTypeId": 3
+        },
+        {
+            "X": 59,
+            "Y": 0,
+            "Z": 58,
+            "TileTypeId": 3
+        },
+        {
+            "X": 60,
+            "Y": 0,
+            "Z": 59,
+            "TileTypeId": 3
+        },
+        {
+            "X": 56,
+            "Y": 0,
+            "Z": 58,
+            "TileTypeId": 3
+        },
+        {
+            "X": 60,
+            "Y": 0,
+            "Z": 60,
+            "TileTypeId": 3
+        },
+        {
+            "X": 59,
+            "Y": 0,
+            "Z": 64,
+            "TileTypeId": 3
+        },
+        {
+            "X": 58,
+            "Y": 0,
+            "Z": 64,
+            "TileTypeId": 3
+        },
+        {
+            "X": 59,
+            "Y": 0,
+            "Z": 63,
+            "TileTypeId": 3
+        },
+        {
+            "X": 147,
+            "Y": 0,
+            "Z": 68,
+            "TileTypeId": 3
+        },
+        {
+            "X": 59,
+            "Y": 0,
+            "Z": 62,
+            "TileTypeId": 3
+        },
+        {
+            "X": 60,
+            "Y": 0,
+            "Z": 62,
+            "TileTypeId": 3
+        },
+        {
+            "X": 60,
+            "Y": 0,
+            "Z": 61,
+            "TileTypeId": 3
+        },
+        {
+            "X": 58,
+            "Y": 0,
+            "Z": 58,
+            "TileTypeId": 3
+        },
+        {
+            "X": 57,
+            "Y": 0,
+            "Z": 58,
+            "TileTypeId": 3
+        },
+        {
+            "X": 56,
+            "Y": 0,
+            "Z": 59,
+            "TileTypeId": 3
+        },
+        {
+            "X": 55,
+            "Y": 0,
+            "Z": 59,
+            "TileTypeId": 3
+        },
+        {
+            "X": 55,
+            "Y": 0,
+            "Z": 60,
+            "TileTypeId": 3
+        },
+        {
+            "X": 55,
+            "Y": 0,
+            "Z": 61,
+            "TileTypeId": 3
+        },
+        {
+            "X": 55,
+            "Y": 0,
+            "Z": 62,
+            "TileTypeId": 3
+        },
+        {
+            "X": 56,
+            "Y": 0,
+            "Z": 62,
+            "TileTypeId": 3
+        },
+        {
+            "X": 56,
+            "Y": 0,
+            "Z": 63,
+            "TileTypeId": 3
+        },
+        {
+            "X": 57,
+            "Y": 0,
+            "Z": 63,
+            "TileTypeId": 2
+        },
+        {
+            "X": 58,
+            "Y": 0,
+            "Z": 63,
+            "TileTypeId": 3
+        },
+        {
+            "X": 60,
+            "Y": 0,
+            "Z": 64,
+            "TileTypeId": 3
+        },
+        {
+            "X": 60,
+            "Y": 0,
+            "Z": 65,
+            "TileTypeId": 3
+        },
+        {
+            "X": 61,
+            "Y": 0,
+            "Z": 65,
+            "TileTypeId": 3
+        },
+        {
+            "X": 61,
+            "Y": 0,
+            "Z": 64,
+            "TileTypeId": 3
+        },
+        {
+            "X": 62,
+            "Y": 0,
+            "Z": 64,
+            "TileTypeId": 3
+        },
+        {
+            "X": 63,
+            "Y": 0,
+            "Z": 64,
+            "TileTypeId": 3
+        },
+        {
+            "X": 63,
+            "Y": 0,
+            "Z": 63,
+            "TileTypeId": 3
+        },
+        {
+            "X": 64,
+            "Y": 0,
+            "Z": 63,
+            "TileTypeId": 3
+        },
+        {
+            "X": 65,
+            "Y": 0,
+            "Z": 63,
+            "TileTypeId": 2
+        },
+        {
+            "X": 65,
+            "Y": 0,
+            "Z": 62,
+            "TileTypeId": 2
+        },
+        {
+            "X": 187,
+            "Y": 0,
+            "Z": 64,
+            "TileTypeId": 2
+        },
+        {
+            "X": 65,
+            "Y": 0,
+            "Z": 68,
+            "TileTypeId": 2
+        },
+        {
+            "X": 65,
+            "Y": 0,
+            "Z": 67,
+            "TileTypeId": 2
+        },
+        {
+            "X": 64,
+            "Y": 0,
+            "Z": 66,
+            "TileTypeId": 2
+        },
+        {
+            "X": 66,
+            "Y": 0,
+            "Z": 65,
+            "TileTypeId": 2
+        },
+        {
+            "X": 66,
+            "Y": 0,
+            "Z": 64,
+            "TileTypeId": 2
+        },
+        {
+            "X": 66,
+            "Y": 0,
+            "Z": 63,
+            "TileTypeId": 2
+        },
+        {
+            "X": 66,
+            "Y": 0,
+            "Z": 62,
+            "TileTypeId": 2
+        },
+        {
+            "X": 66,
+            "Y": 0,
+            "Z": 61,
+            "TileTypeId": 2
+        },
+        {
+            "X": 66,
+            "Y": 0,
+            "Z": 60,
+            "TileTypeId": 2
+        },
+        {
+            "X": 65,
+            "Y": 0,
+            "Z": 60,
+            "TileTypeId": 2
+        },
+        {
+            "X": 65,
+            "Y": 0,
+            "Z": 59,
+            "TileTypeId": 2
+        },
+        {
+            "X": 64,
+            "Y": 0,
+            "Z": 59,
+            "TileTypeId": 2
+        },
+        {
+            "X": 64,
+            "Y": 0,
+            "Z": 58,
+            "TileTypeId": 2
+        },
+        {
+            "X": 63,
+            "Y": 0,
+            "Z": 58,
+            "TileTypeId": 2
+        },
+        {
+            "X": 63,
+            "Y": 0,
+            "Z": 59,
+            "TileTypeId": 2
+        },
+        {
+            "X": 63,
+            "Y": 0,
+            "Z": 60,
+            "TileTypeId": 2
+        },
+        {
+            "X": 63,
+            "Y": 0,
+            "Z": 61,
+            "TileTypeId": 2
+        },
+        {
+            "X": 64,
+            "Y": 0,
+            "Z": 61,
+            "TileTypeId": 2
+        },
+        {
+            "X": 64,
+            "Y": 0,
+            "Z": 62,
+            "TileTypeId": 2
+        },
+        {
+            "X": 67,
+            "Y": 0,
+            "Z": 64,
+            "TileTypeId": 2
+        },
+        {
+            "X": 67,
+            "Y": 0,
+            "Z": 65,
+            "TileTypeId": 2
+        },
+        {
+            "X": 65,
+            "Y": 0,
+            "Z": 61,
+            "TileTypeId": 2
+        },
+        {
+            "X": 64,
+            "Y": 0,
+            "Z": 60,
+            "TileTypeId": 2
+        },
+        {
+            "X": 67,
+            "Y": 0,
+            "Z": 60,
+            "TileTypeId": 2
+        },
+        {
+            "X": 68,
+            "Y": 0,
+            "Z": 60,
+            "TileTypeId": 2
+        },
+        {
+            "X": 150,
+            "Y": 0,
+            "Z": 67,
+            "TileTypeId": 2
+        },
+        {
+            "X": 55,
+            "Y": 0,
+            "Z": 64,
+            "TileTypeId": 2
+        },
+        {
+            "X": 55,
+            "Y": 0,
+            "Z": 63,
+            "TileTypeId": 2
+        },
+        {
+            "X": 54,
+            "Y": 0,
+            "Z": 63,
+            "TileTypeId": 2
+        },
+        {
+            "X": 58,
+            "Y": -1,
+            "Z": 64,
+            "TileTypeId": 2
+        },
+        {
+            "X": 57,
+            "Y": -1,
+            "Z": 64,
+            "TileTypeId": 2
+        },
+        {
+            "X": 57,
+            "Y": -1,
+            "Z": 63,
+            "TileTypeId": 2
+        },
+        {
+            "X": 56,
+            "Y": -1,
+            "Z": 63,
+            "TileTypeId": 2
+        },
+        {
+            "X": 56,
+            "Y": -1,
+            "Z": 62,
+            "TileTypeId": 2
+        },
+        {
+            "X": 55,
+            "Y": -1,
+            "Z": 62,
+            "TileTypeId": 2
+        },
+        {
+            "X": 55,
+            "Y": -1,
+            "Z": 61,
+            "TileTypeId": 2
+        },
+        {
+            "X": 54,
+            "Y": -1,
+            "Z": 61,
+            "TileTypeId": 2
+        },
+        {
+            "X": 54,
+            "Y": -1,
+            "Z": 60,
+            "TileTypeId": 2
+        },
+        {
+            "X": 54,
+            "Y": -1,
+            "Z": 59,
+            "TileTypeId": 2
+        },
+        {
+            "X": 54,
+            "Y": -1,
+            "Z": 58,
+            "TileTypeId": 2
+        },
+        {
+            "X": 54,
+            "Y": -1,
+            "Z": 57,
+            "TileTypeId": 2
+        },
+        {
+            "X": 55,
+            "Y": -1,
+            "Z": 57,
+            "TileTypeId": 2
+        },
+        {
+            "X": 55,
+            "Y": -1,
+            "Z": 56,
+            "TileTypeId": 2
+        },
+        {
+            "X": 56,
+            "Y": -1,
+            "Z": 56,
+            "TileTypeId": 2
+        },
+        {
+            "X": 56,
+            "Y": -1,
+            "Z": 57,
+            "TileTypeId": 2
+        },
+        {
+            "X": 57,
+            "Y": -1,
+            "Z": 57,
+            "TileTypeId": 2
+        },
+        {
+            "X": 57,
+            "Y": -1,
+            "Z": 58,
+            "TileTypeId": 2
+        },
+        {
+            "X": 57,
+            "Y": -1,
+            "Z": 59,
+            "TileTypeId": 2
+        },
+        {
+            "X": 57,
+            "Y": -1,
+            "Z": 60,
+            "TileTypeId": 2
+        },
+        {
+            "X": 57,
+            "Y": -1,
+            "Z": 61,
+            "TileTypeId": 2
+        },
+        {
+            "X": 57,
+            "Y": -1,
+            "Z": 62,
+            "TileTypeId": 2
+        },
+        {
+            "X": 56,
+            "Y": -1,
+            "Z": 64,
+            "TileTypeId": 2
+        },
+        {
+            "X": 55,
+            "Y": -1,
+            "Z": 64,
+            "TileTypeId": 2
+        },
+        {
+            "X": 54,
+            "Y": -1,
+            "Z": 64,
+            "TileTypeId": 2
+        },
+        {
+            "X": 53,
+            "Y": -1,
+            "Z": 64,
+            "TileTypeId": 2
+        },
+        {
+            "X": 52,
+            "Y": -1,
+            "Z": 64,
+            "TileTypeId": 2
+        },
+        {
+            "X": 52,
+            "Y": -1,
+            "Z": 63,
+            "TileTypeId": 2
+        },
+        {
+            "X": 51,
+            "Y": -1,
+            "Z": 63,
+            "TileTypeId": 2
+        },
+        {
+            "X": 51,
+            "Y": -1,
+            "Z": 62,
+            "TileTypeId": 2
+        },
+        {
+            "X": 50,
+            "Y": -1,
+            "Z": 62,
+            "TileTypeId": 2
+        },
+        {
+            "X": 50,
+            "Y": -1,
+            "Z": 61,
+            "TileTypeId": 2
+        },
+        {
+            "X": 49,
+            "Y": -1,
+            "Z": 61,
+            "TileTypeId": 2
+        },
+        {
+            "X": 49,
+            "Y": -1,
+            "Z": 60,
+            "TileTypeId": 2
+        },
+        {
+            "X": 49,
+            "Y": -1,
+            "Z": 59,
+            "TileTypeId": 2
+        },
+        {
+            "X": 49,
+            "Y": -1,
+            "Z": 58,
+            "TileTypeId": 2
+        },
+        {
+            "X": 50,
+            "Y": -1,
+            "Z": 58,
+            "TileTypeId": 2
+        },
+        {
+            "X": 51,
+            "Y": -1,
+            "Z": 58,
+            "TileTypeId": 2
+        },
+        {
+            "X": 52,
+            "Y": -1,
+            "Z": 58,
+            "TileTypeId": 2
+        },
+        {
+            "X": 53,
+            "Y": -1,
+            "Z": 58,
+            "TileTypeId": 2
+        },
+        {
+            "X": 55,
+            "Y": -1,
+            "Z": 59,
+            "TileTypeId": 2
+        },
+        {
+            "X": 56,
+            "Y": -1,
+            "Z": 59,
+            "TileTypeId": 2
+        },
+        {
+            "X": 56,
+            "Y": -1,
+            "Z": 60,
+            "TileTypeId": 2
+        },
+        {
+            "X": 55,
+            "Y": -1,
+            "Z": 58,
+            "TileTypeId": 2
+        }
+    ],
+    "Objects": [
+        {
+            "TypeId": "shop",
+            "X": 193,
+            "Y": 0,
+            "Z": 62
+        },
+        {
+            "TypeId": "shop",
+            "X": 57,
+            "Y": 0,
+            "Z": 57
+        }
+    ]
+}

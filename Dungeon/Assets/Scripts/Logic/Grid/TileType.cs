@@ -7,12 +7,15 @@ namespace Dungeon.Logic
     // All other values are terrain / object types.
     public enum TileType
     {
-        None     = 0,
-        Darkness = 1,
-        Water    = 2,
-        Grass    = 3,
-        Dirt     = 4,
-        Rock     = 5,
-        Tree     = 6,
+        None       = 0,
+        Darkness   = 1,
+        Water      = 2,
+        Grass      = 3,
+        Dirt       = 4,
+        Rock       = 5,
+        Tree       = 6,
+        Sand       = 7,
+        StoneFloor = 8,  // dungeon floor tile (carved rock, walkable)
+        StoneWall  = 9,  // dungeon wall tile  (solid, blocks movement)
     }
 }
