@@ -4,42 +4,49 @@ using UnityEngine;
 
 namespace Dungeon.Visuals
 {
-    // Maps TileType enum values to sprite-sheet indices (column-major linear index).
-    // Create via Assets → Create → Dungeon → Tile Registry, then fill in the table.
-    // TileType.None is never rendered regardless of any entry here.
-    [CreateAssetMenu(menuName = "Dungeon/Tile Registry", fileName = "TileRegistry")]
-    public class TileRegistry : ScriptableObject
+    // Maps each TileType to a render color and a priority for dual-grid autotile layering.
+    // Higher priority types are drawn on top at transitions between two different tile types.
+    // TileType.None is never rendered; it acts as transparent / empty space.
+    [CreateAssetMenu(menuName = "Dungeon/Tile Color Registry", fileName = "TileColorRegistry")]
+    public class TileColorRegistry : ScriptableObject
     {
         [System.Serializable]
         public struct Entry
         {
             public TileType TileType;
-            [Tooltip("Linear index into the sprite sheet (left-to-right, top-to-bottom from 0)")]
-            public int SheetIndex;
+            public Color    Color;
+            [Tooltip("Higher value = drawn on top when two types share a dual-grid corner.")]
+            public int      Priority;
         }
 
-        [SerializeField] private Entry[] _entries;
+        [SerializeField] private List<Entry> _entries   = new();
+        [SerializeField] private Color       _noneColor = new Color(0, 0, 0, 0);
 
-        private Dictionary<int, int> _lookup;
+        private Dictionary<int, Entry> _lookup;
 
         private void OnEnable() => BuildLookup();
 
         private void BuildLookup()
         {
-            _lookup = new Dictionary<int, int>(_entries?.Length ?? 0);
+            _lookup = new Dictionary<int, Entry>(_entries?.Count ?? 0);
             if (_entries == null) return;
             foreach (var e in _entries)
-                _lookup[(int)e.TileType] = e.SheetIndex;
+                _lookup[(int)e.TileType] = e;
         }
 
-        // Returns the sprite-sheet index for a given TileType int value.
-        // Returns 0 (Darkness / first tile) if the type has no mapping.
-        public int GetSheetIndex(int tileTypeValue)
+        public bool  IsNone    (int tileTypeValue) => tileTypeValue == (int)TileType.None;
+        public Color NoneColor => _noneColor;
+
+        public Color GetColor(int tileTypeValue)
         {
             if (_lookup == null) BuildLookup();
-            return _lookup.TryGetValue(tileTypeValue, out int idx) ? idx : 0;
+            return _lookup.TryGetValue(tileTypeValue, out var e) ? e.Color : _noneColor;
         }
 
-        public bool IsNone(int tileTypeValue) => tileTypeValue == (int)TileType.None;
+        public int GetPriority(int tileTypeValue)
+        {
+            if (_lookup == null) BuildLookup();
+            return _lookup.TryGetValue(tileTypeValue, out var e) ? e.Priority : -1;
+        }
     }
 }

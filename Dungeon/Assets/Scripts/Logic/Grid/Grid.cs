@@ -5,7 +5,7 @@ namespace Dungeon.Logic
 {
     // Infinite 3D grid. XZ = horizontal plane, Y = elevation.
     // Cells are stored sparsely — only occupied coordinates consume memory.
-    public class Grid
+    public class CellGrid
     {
         private readonly Dictionary<Vector3Int, Cell> _cells = new();
 

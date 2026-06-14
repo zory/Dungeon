@@ -9,7 +9,7 @@ namespace Dungeon.Logic
     {
         // The one Grid instance for the scene — owned here so all MonoBehaviours
         // can reach it via a single inspector reference to GridManager.
-        public Grid Grid { get; } = new Grid();
+        public CellGrid Grid { get; } = new CellGrid();
 
         public Vector3Int? HoveredCell          { get; private set; }
         public Vector3Int? SelectedCell         { get; private set; }

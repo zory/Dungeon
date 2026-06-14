@@ -238,8 +238,8 @@ namespace Dungeon.Visuals
 
         private void RebuildChunkAt(Vector3Int cellCoord)
         {
-            int chunkX = Mathf.FloorToInt((float)cellCoord.x / ChunkRenderer.ChunkSize);
-            int chunkZ = Mathf.FloorToInt((float)cellCoord.z / ChunkRenderer.ChunkSize);
+            int chunkX = Mathf.FloorToInt((float)cellCoord.x / DualGridChunkRenderer.ChunkSize);
+            int chunkZ = Mathf.FloorToInt((float)cellCoord.z / DualGridChunkRenderer.ChunkSize);
             _worldRenderer.RebuildChunk(new Vector2Int(chunkX, chunkZ));
         }
     }

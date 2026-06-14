@@ -152,10 +152,9 @@ MonoBehaviour:
   _gridRenderer: {fileID: 1345222020}
   _worldGenerator: {fileID: 593487139}
   _chunkLoader: {fileID: 705518236}
-  _material: {fileID: 2100000, guid: 4605ce3ed4985e642abc1d0b36e42ac0, type: 2}
-  _tileRegistry: {fileID: 11400000, guid: b6b319529e866b74aa6203a87a0b3f68, type: 2}
-  _sheetColumns: 4
-  _sheetRows: 5
+  _atlas: {fileID: 11400000, guid: 6a72971e38f5ad846aa60951ce94b45b, type: 2}
+  _colorRegistry: {fileID: 11400000, guid: b6b319529e866b74aa6203a87a0b3f68, type: 2}
+  _material: {fileID: 2100000, guid: 3265ccd01ad105c41899ef6a434c5db8, type: 2}
 --- !u!4 &28156081
 Transform:
   m_ObjectHideFlags: 0

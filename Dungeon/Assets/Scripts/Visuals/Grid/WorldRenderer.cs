@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Dungeon.Visuals
 {
-    // Renders chunks as they are generated.
+    // Renders chunks as they are generated using the dual-grid autotile system.
     // Listens to WorldGenerator.OnWorldGenerated (finite/pre-built worlds)
     // and ChunkLoader.OnChunksLoaded (infinite streaming) — both can be active at once.
     public class WorldRenderer : MonoBehaviour
@@ -14,13 +14,12 @@ namespace Dungeon.Visuals
         [SerializeField] private WorldGenerator _worldGenerator; // optional: finite pre-built world
         [SerializeField] private ChunkLoader    _chunkLoader;    // optional: infinite streaming
 
-        [Header("Sprite Sheet")]
-        [SerializeField] private Material     _material;
-        [SerializeField] private TileRegistry _tileRegistry;
-        [SerializeField] private int          _sheetColumns = 8;
-        [SerializeField] private int          _sheetRows    = 8;
+        [Header("Dual-Grid Autotile")]
+        [SerializeField] private DualGridAtlas     _atlas;
+        [SerializeField] private TileColorRegistry _colorRegistry;
+        [SerializeField] private Material          _material; // DualGridTile shader
 
-        private readonly Dictionary<Vector2Int, ChunkRenderer> _chunks = new();
+        private readonly Dictionary<Vector2Int, DualGridChunkRenderer> _chunks = new();
 
         private void OnEnable()
         {
@@ -40,7 +39,6 @@ namespace Dungeon.Visuals
                 _chunkLoader.OnChunksLoaded -= OnChunksLoaded;
         }
 
-        // WorldGenerator fired: rebuild everything in the grid from scratch
         private void OnWorldGenerated()
         {
             ClearChunks();
@@ -53,19 +51,34 @@ namespace Dungeon.Visuals
                 SpawnChunk(chunkCoord);
         }
 
-        // ChunkLoader fired: add only the new chunks, skip already-rendered ones
         private void OnChunksLoaded(IReadOnlyList<Vector2Int> newChunks)
         {
             foreach (var chunkCoord in newChunks)
                 SpawnChunk(chunkCoord);
+
+            // Edge tiles of existing neighbors sampled None for cells now populated in new chunks.
+            // Rebuild those neighbors so their edges render correctly.
+            foreach (var chunkCoord in newChunks)
+            {
+                TryRebuildExisting(new Vector2Int(chunkCoord.x - 1, chunkCoord.y    ));
+                TryRebuildExisting(new Vector2Int(chunkCoord.x,     chunkCoord.y - 1));
+                TryRebuildExisting(new Vector2Int(chunkCoord.x - 1, chunkCoord.y - 1));
+            }
+        }
+
+        private void TryRebuildExisting(Vector2Int chunkCoord)
+        {
+            if (_chunks.TryGetValue(chunkCoord, out var chunk))
+                chunk.Build(chunkCoord, _gridManager, _gridRenderer, _atlas, _colorRegistry,
+                            _material);
         }
 
         private void SpawnChunk(Vector2Int chunkCoord)
         {
-            if (_chunks.ContainsKey(chunkCoord)) return; // already rendered
+            if (_chunks.ContainsKey(chunkCoord)) return;
 
             float cs            = _gridRenderer.CellSize;
-            float chunkWorldLen = ChunkRenderer.ChunkSize * cs;
+            float chunkWorldLen = DualGridChunkRenderer.ChunkSize * cs;
 
             var go = new GameObject($"Chunk_{chunkCoord.x}_{chunkCoord.y}");
             go.transform.SetParent(transform, worldPositionStays: false);
@@ -74,31 +87,26 @@ namespace Dungeon.Visuals
                 _gridRenderer.WorldY,
                 chunkCoord.y * chunkWorldLen + _gridRenderer.XZOffset.y);
 
-            var chunk = go.AddComponent<ChunkRenderer>();
-            go.GetComponent<MeshRenderer>().sharedMaterial = _material;
-            chunk.Build(chunkCoord, _gridManager, _gridRenderer, _tileRegistry, _sheetColumns, _sheetRows);
+            var chunk = go.AddComponent<DualGridChunkRenderer>();
+            chunk.Build(chunkCoord, _gridManager, _gridRenderer, _atlas, _colorRegistry,
+                        _material);
 
             _chunks[chunkCoord] = chunk;
         }
 
-        // Rebuilds a single chunk's mesh from the current grid state.
-        // If the chunk has not been spawned yet it is created.
+        // Rebuilds a single chunk's meshes from the current grid state.
         // Called by EditorToolController after painting or erasing a cell.
         public void RebuildChunk(Vector2Int chunkCoord)
         {
-            if (_chunks.TryGetValue(chunkCoord, out ChunkRenderer existing))
-            {
-                // Rebuild mesh in place — avoids destroying / re-creating the GameObject.
-                existing.Build(chunkCoord, _gridManager, _gridRenderer, _tileRegistry, _sheetColumns, _sheetRows);
-            }
+            if (_chunks.TryGetValue(chunkCoord, out var existing))
+                existing.Build(chunkCoord, _gridManager, _gridRenderer, _atlas, _colorRegistry,
+                               _material);
             else
-            {
                 SpawnChunk(chunkCoord);
-            }
         }
 
-        // Destroys all chunk GameObjects and respawns only the chunks that have cells
-        // at the currently active elevation layer.  Call after loading a level or switching elevation.
+        // Destroys all chunk GameObjects and respawns only chunks that have cells
+        // at the currently active elevation layer.
         public void RebuildAll()
         {
             int elevation = _gridRenderer.ElevationLayer;
@@ -124,7 +132,7 @@ namespace Dungeon.Visuals
         }
 
         private static Vector2Int CellToChunk(int cellX, int cellZ) => new Vector2Int(
-            Mathf.FloorToInt((float)cellX / ChunkRenderer.ChunkSize),
-            Mathf.FloorToInt((float)cellZ / ChunkRenderer.ChunkSize));
+            Mathf.FloorToInt((float)cellX / DualGridChunkRenderer.ChunkSize),
+            Mathf.FloorToInt((float)cellZ / DualGridChunkRenderer.ChunkSize));
     }
 }
