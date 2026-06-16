@@ -35,6 +35,10 @@ namespace Dungeon.Visuals
     public class DualGridAtlas : ScriptableObject
     {
         [SerializeField] private Texture2D _atlas;
+        [Tooltip("Optional outline texture with the same tile layout. " +
+                 "Alpha = where border lines appear, RGB = outline colour. " +
+                 "Draw borders on both sides of each transition edge.")]
+        [SerializeField] private Texture2D _outlineAtlas;
         [SerializeField] [Min(1)] private int _columns = 5;
         [SerializeField] [Min(1)] private int _rows    = 5;
 
@@ -43,7 +47,8 @@ namespace Dungeon.Visuals
                  "Bits: NW=1, NE=2, SW=4, SE=8.")]
         [SerializeField] private int[] _tileBitmasks = { 15, 2, 1, 3, 4, 10, 6, 7 };
 
-        public Texture2D Atlas => _atlas;
+        public Texture2D Atlas        => _atlas;
+        public Texture2D OutlineAtlas => _outlineAtlas;
 
         // Precomputed lookup tables (bitmask 0-15 → atlas slot + swap flag).
         private int[]  _slotLookup;

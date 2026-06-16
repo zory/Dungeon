@@ -1,3 +1,4 @@
+using Dungeon.Logic.Services;
 using UnityEngine;
 
 namespace Dungeon.Logic
@@ -16,12 +17,12 @@ namespace Dungeon.Logic
             Range  = range;
         }
 
-        public void TryInteract()
+        public void TryInteract(WorldObjectService registry)
         {
             WorldObject closest     = null;
             float       closestDist = float.MaxValue;
 
-            foreach (var obj in WorldObjectRegistry.All.Values)
+            foreach (var obj in registry.All.Values)
             {
                 if (obj == _owner) continue;
                 if (!obj.HasFeature<Interactable>()) continue;

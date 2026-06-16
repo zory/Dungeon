@@ -6,22 +6,24 @@ namespace Dungeon.Logic
 {
     // Base concept for every entity in the world — characters, trees, items, buildings, etc.
     // Features are added via composition; nothing is inherited.
+    // IDs are assigned by WorldObjectService.Register(), not internally.
     public class WorldObject
     {
-        private static int _idCounter;
         private readonly Dictionary<Type, object> _features = new();
 
-        public int        Id            { get; }
+        public int        Id            { get; private set; }
         public string     Name          { get; set; }
         public Vector3    WorldPosition { get; private set; }
         public Vector3Int CellCoords    { get; private set; }
 
         public WorldObject(string name, Vector3 position)
         {
-            Id            = ++_idCounter;
             Name          = name;
             WorldPosition = position;
         }
+
+        // Called by WorldObjectService.Register() to assign the ID.
+        public void SetId(int id) => Id = id;
 
         // ── Feature composition ────────────────────────────────────────────────────────
         public void AddFeature<T>(T feature) where T : class =>

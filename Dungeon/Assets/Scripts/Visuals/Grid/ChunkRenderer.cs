@@ -4,13 +4,14 @@ using UnityEngine;
 
 namespace Dungeon.Visuals
 {
-    // Builds a single flat mesh for a chunk using dual-grid autotiling.
+    // Builds a layered mesh for one chunk using dual-grid autotiling.
     //
     // DUAL-GRID OVERVIEW
     // ------------------
     // The data grid stores one TileType per cell (x, y, z).
-    // Each visual tile covers the same world area as a data cell but looks at FOUR surrounding
-    // data cells to compute a 4-bit bitmask that selects a shape from the DualGridAtlas.
+    // Each visual tile covers the same world area as a data cell but looks at FOUR
+    // surrounding data cells to compute a 4-bit bitmask that selects a shape from
+    // the DualGridAtlas.
     //
     //   Visual tile at local (i, j) samples:
     //     SW = cell (baseX + i,     y, baseZ + j    )
@@ -20,31 +21,23 @@ namespace Dungeon.Visuals
     //
     // Bitmask bits:  NW=1, NE=2, SW=4, SE=8
     //
-    // SINGLE-PASS RENDERING
-    // ---------------------
-    // One mesh, one material (DualGridTile shader).
-    // Per-vertex COLOR     = primary tint  (atlas-opaque areas)
-    // Per-vertex TEXCOORD1 = secondary tint (atlas-transparent areas)
-    // The shader blends both in a single pass using the atlas alpha.
+    // PER-LAYER RENDERING
+    // -------------------
+    // Each visible terrain type gets its own sub-mesh layer.  Layers are ordered by
+    // priority (lowest first) and rendered with alpha blending, so higher-priority
+    // terrain draws on top and any number of types can meet at a single tile.
+    //
+    // The shape atlas (_MainTex) defines terrain presence via alpha (1 inside,
+    // 0 outside).  An optional outline atlas (_OutlineTex) adds border lines.
+    // The complement trick (8 tiles cover 16 bitmasks) is handled by an invert
+    // flag passed per vertex — the shader flips the alpha when set.
     //
     // HIDDEN TYPES
     // ------------
     // Types not registered in TileColorRegistry (e.g. Tree, Darkness) are "hidden."
-    // Hidden cells are transparent to the renderer: they match whichever primary type
-    // their visible neighbours have, so they never create visual boundaries.
-    //
-    // TYPE LIMIT PER TILE
-    // -------------------
-    // Each tile can only show TWO types: primary (highest priority) and secondary
-    // (second-highest priority). When 3+ types share a corner, the 3rd/4th types
-    // are visually merged into the secondary colour. This is a fundamental limitation
-    // of the 4-bit / 8-shape dual-grid approach.
-    //
-    // BITMASK → TILE MAPPING
-    // ──────────────────────
-    // The DualGridAtlas stores which bitmask each of its 8 tiles represents.
-    // For any computed bitmask (0–15) the atlas returns the correct UV rect
-    // and a swap flag (true when using the complement tile).
+    // Hidden cells extend whichever terrain types are present at adjacent corners,
+    // but only if that terrain type actually appears in at least one non-hidden
+    // corner of the tile.
     public class DualGridChunkRenderer : MonoBehaviour
     {
         public const int ChunkSize = WorldConstants.ChunkSize;
@@ -56,6 +49,8 @@ namespace Dungeon.Visuals
 
         private MeshFilter   _filter;
         private MeshRenderer _renderer;
+
+        private static Texture2D s_clearTexture;
 
         private void Awake()
         {
@@ -71,149 +66,166 @@ namespace Dungeon.Visuals
 
         public void Build(
             Vector2Int        chunkCoord,
-            GridManager       gridManager,
-            GridRenderer      gridRenderer,
+            CellGrid          grid,
+            int               elevation,
+            float             cellSize,
             DualGridAtlas     atlas,
             TileColorRegistry colorRegistry,
             Material          material)
         {
-            _renderer.sharedMaterial = material;
-
             if (atlas.Atlas != null)
                 material.mainTexture = atlas.Atlas;
+            material.SetTexture("_OutlineTex",
+                atlas.OutlineAtlas != null ? atlas.OutlineAtlas : GetClearTexture());
 
-            int       elevation = gridRenderer.ElevationLayer;
-            float     cs        = gridRenderer.CellSize;
-            CellGrid  grid      = gridManager.Grid;
-            int       baseX     = chunkCoord.x * ChunkSize;
-            int       baseZ     = chunkCoord.y * ChunkSize;
+            int baseX = chunkCoord.x * ChunkSize;
+            int baseZ = chunkCoord.y * ChunkSize;
 
-            var verts      = new List<Vector3>(ChunkSize * ChunkSize * 4);
-            var uvs        = new List<Vector2>(ChunkSize * ChunkSize * 4);
-            var primColors = new List<Color>  (ChunkSize * ChunkSize * 4);
-            var secColors  = new List<Vector4>(ChunkSize * ChunkSize * 4);
-            var tris       = new List<int>    (ChunkSize * ChunkSize * 6);
+            // ── Pass 1: collect all visible terrain types (including border cells). ──
 
-            for (int j = 0; j < ChunkSize; j++)
-            for (int i = 0; i < ChunkSize; i++)
+            var terrainTypes = new HashSet<int>();
+            for (int j = 0; j <= ChunkSize; j++)
+            for (int i = 0; i <= ChunkSize; i++)
             {
-                int gx = baseX + i;
-                int gz = baseZ + j;
-
-                int swType = CellType(grid, gx,     elevation, gz    );
-                int seType = CellType(grid, gx + 1, elevation, gz    );
-                int nwType = CellType(grid, gx,     elevation, gz + 1);
-                int neType = CellType(grid, gx + 1, elevation, gz + 1);
-
-                if (AllNone(colorRegistry, swType, seType, nwType, neType)) continue;
-
-                // Primary = highest-priority visible type among the 4 cells.
-                int primaryType = HighestPriority(colorRegistry, swType, seType, nwType, neType, exclude: -1);
-
-                // Bitmask: visible cells matching primary set their bit.
-                // Hidden cells (unregistered types, None, unloaded chunks) also set
-                // their bit so they never create a visual boundary.
-                int mask = 0;
-                if (IsHidden(colorRegistry, nwType) || nwType == primaryType) mask |= BIT_NW;
-                if (IsHidden(colorRegistry, neType) || neType == primaryType) mask |= BIT_NE;
-                if (IsHidden(colorRegistry, swType) || swType == primaryType) mask |= BIT_SW;
-                if (IsHidden(colorRegistry, seType) || seType == primaryType) mask |= BIT_SE;
-
-                // Atlas resolves the bitmask to a tile UV and whether to swap colours.
-                Rect uvRect = atlas.GetUVRect(mask, out bool swapColors);
-
-                // Secondary = highest-priority visible type that differs from primary.
-                int secondaryType = HighestPriority(colorRegistry, swType, seType, nwType, neType,
-                                                    exclude: primaryType);
-
-                Color primaryColor   = colorRegistry.GetColor(primaryType);
-
-                // When there is no real secondary type, fill with primary so the
-                // tile is solid — avoids transparent gaps and dark-fringe artifacts.
-                Color secondaryColor = IsHidden(colorRegistry, secondaryType)
-                    ? primaryColor
-                    : colorRegistry.GetColor(secondaryType);
-
-                // When swapColors, atlas shape represents secondary cells → swap assignments.
-                Color vertPrimary   = swapColors ? secondaryColor : primaryColor;
-                Color vertSecondary = swapColors ? primaryColor   : secondaryColor;
-
-                float x0 = i * cs, x1 = x0 + cs;
-                float z0 = j * cs, z1 = z0 + cs;
-
-                AppendQuad(verts, uvs, primColors, secColors, tris,
-                           x0, x1, z0, z1, uvRect, vertPrimary, vertSecondary);
+                int t = CellType(grid, baseX + i, elevation, baseZ + j);
+                if (!IsHidden(colorRegistry, t))
+                    terrainTypes.Add(t);
             }
 
-            UploadMesh(_filter, verts, uvs, primColors, secColors, tris);
+            if (terrainTypes.Count == 0) { ClearMesh(); return; }
+
+            // Lowest priority first → bottom layer → rendered first.
+            var sortedTypes = new List<int>(terrainTypes);
+            sortedTypes.Sort((a, b) =>
+                colorRegistry.GetPriority(a).CompareTo(colorRegistry.GetPriority(b)));
+
+            // ── Pass 2: build per-layer mesh data. ──────────────────────────────────
+
+            var verts  = new List<Vector3>();
+            var uvs    = new List<Vector2>();
+            var colors = new List<Color>();
+            var flags  = new List<Vector4>();
+            var layerTris = new List<List<int>>();
+
+            foreach (int terrainType in sortedTypes)
+            {
+                var   tris   = new List<int>();
+                Color tColor = colorRegistry.GetColor(terrainType);
+
+                for (int j = 0; j < ChunkSize; j++)
+                for (int i = 0; i < ChunkSize; i++)
+                {
+                    int gx = baseX + i;
+                    int gz = baseZ + j;
+
+                    int swType = CellType(grid, gx,     elevation, gz    );
+                    int seType = CellType(grid, gx + 1, elevation, gz    );
+                    int nwType = CellType(grid, gx,     elevation, gz + 1);
+                    int neType = CellType(grid, gx + 1, elevation, gz + 1);
+
+                    // Raw mask: only corners that are exactly this terrain type.
+                    int rawMask = 0;
+                    if (nwType == terrainType) rawMask |= BIT_NW;
+                    if (neType == terrainType) rawMask |= BIT_NE;
+                    if (swType == terrainType) rawMask |= BIT_SW;
+                    if (seType == terrainType) rawMask |= BIT_SE;
+
+                    if (rawMask == 0) continue; // type not present at this tile
+
+                    // Hidden corners extend coverage for present types.
+                    int hiddenMask = 0;
+                    if (IsHidden(colorRegistry, nwType)) hiddenMask |= BIT_NW;
+                    if (IsHidden(colorRegistry, neType)) hiddenMask |= BIT_NE;
+                    if (IsHidden(colorRegistry, swType)) hiddenMask |= BIT_SW;
+                    if (IsHidden(colorRegistry, seType)) hiddenMask |= BIT_SE;
+
+                    int  mask   = rawMask | hiddenMask;
+                    Rect uvRect = atlas.GetUVRect(mask, out bool swap);
+
+                    float x0 = i * cellSize, x1 = x0 + cellSize;
+                    float z0 = j * cellSize, z1 = z0 + cellSize;
+
+                    AppendQuad(verts, uvs, colors, flags, tris,
+                               x0, x1, z0, z1, uvRect, tColor, swap);
+                }
+
+                if (tris.Count > 0)
+                    layerTris.Add(tris);
+            }
+
+            if (layerTris.Count == 0) { ClearMesh(); return; }
+
+            UploadMesh(_filter, verts, uvs, colors, flags, layerTris);
+
+            var materials = new Material[layerTris.Count];
+            for (int i = 0; i < materials.Length; i++)
+                materials[i] = material;
+            _renderer.sharedMaterials = materials;
         }
 
         // ── Helpers ──────────────────────────────────────────────────────────────
 
+        private void ClearMesh()
+        {
+            if (_filter.sharedMesh != null)
+                _filter.sharedMesh.Clear();
+            _renderer.sharedMaterials = System.Array.Empty<Material>();
+        }
+
+        private static Texture2D GetClearTexture()
+        {
+            if (s_clearTexture == null)
+            {
+                s_clearTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+                s_clearTexture.SetPixel(0, 0, Color.clear);
+                s_clearTexture.Apply();
+                s_clearTexture.hideFlags = HideFlags.HideAndDontSave;
+            }
+            return s_clearTexture;
+        }
+
         private static int CellType(CellGrid grid, int x, int y, int z)
             => grid.GetCell(new Vector3Int(x, y, z))?.TileId ?? (int)TileType.None;
 
-        // A type is hidden if it has no registry entry (priority < 0) or is TileType.None.
-        // Hidden types are transparent to the renderer — they never create boundaries.
         private static bool IsHidden(TileColorRegistry reg, int t)
             => reg.IsNone(t) || reg.GetPriority(t) < 0;
 
-        // True when all 4 cells are hidden → skip the tile entirely (no quad emitted).
-        private static bool AllNone(TileColorRegistry reg, int a, int b, int c, int d)
-            => IsHidden(reg, a) && IsHidden(reg, b) && IsHidden(reg, c) && IsHidden(reg, d);
-
-        // Returns the highest-priority visible type among {a,b,c,d}, skipping `exclude`.
-        // Returns TileType.None (0) if none qualify.
-        private static int HighestPriority(TileColorRegistry reg, int a, int b, int c, int d, int exclude)
-        {
-            int best     = (int)TileType.None;
-            int bestPrio = int.MinValue;
-            foreach (int t in new[] { a, b, c, d })
-            {
-                if (IsHidden(reg, t) || t == exclude) continue;
-                int p = reg.GetPriority(t);
-                if (p > bestPrio) { bestPrio = p; best = t; }
-            }
-            return best;
-        }
-
         private static void AppendQuad(
             List<Vector3> verts, List<Vector2> uvs,
-            List<Color> primColors, List<Vector4> secColors,
+            List<Color> colors, List<Vector4> flags,
             List<int> tris,
             float x0, float x1, float z0, float z1,
-            Rect uv, Color primary, Color secondary)
+            Rect uv, Color color, bool swap)
         {
             int b = verts.Count;
 
             // Four corners on the XZ plane (Y = 0 in local chunk space).
-            // Order: SW, SE, NW, NE — matching atlas orientation.
             verts.Add(new Vector3(x0, 0f, z0)); // SW
             verts.Add(new Vector3(x1, 0f, z0)); // SE
             verts.Add(new Vector3(x0, 0f, z1)); // NW
             verts.Add(new Vector3(x1, 0f, z1)); // NE
 
-            uvs.Add(new Vector2(uv.xMin, uv.yMin)); // SW → atlas bottom-left
-            uvs.Add(new Vector2(uv.xMax, uv.yMin)); // SE → atlas bottom-right
-            uvs.Add(new Vector2(uv.xMin, uv.yMax)); // NW → atlas top-left
-            uvs.Add(new Vector2(uv.xMax, uv.yMax)); // NE → atlas top-right
+            uvs.Add(new Vector2(uv.xMin, uv.yMin));
+            uvs.Add(new Vector2(uv.xMax, uv.yMin));
+            uvs.Add(new Vector2(uv.xMin, uv.yMax));
+            uvs.Add(new Vector2(uv.xMax, uv.yMax));
 
-            var sec = new Vector4(secondary.r, secondary.g, secondary.b, secondary.a);
-            primColors.Add(primary); primColors.Add(primary);
-            primColors.Add(primary); primColors.Add(primary);
-            secColors.Add(sec); secColors.Add(sec);
-            secColors.Add(sec); secColors.Add(sec);
+            var flag = new Vector4(swap ? 1f : 0f, 0f, 0f, 0f);
+            colors.Add(color); colors.Add(color);
+            colors.Add(color); colors.Add(color);
+            flags.Add(flag);  flags.Add(flag);
+            flags.Add(flag);  flags.Add(flag);
 
             // CW winding viewed from above (+Y).
-            tris.Add(b);     tris.Add(b + 1); tris.Add(b + 2); // SW, SE, NW
-            tris.Add(b + 1); tris.Add(b + 3); tris.Add(b + 2); // SE, NE, NW
+            tris.Add(b);     tris.Add(b + 1); tris.Add(b + 2);
+            tris.Add(b + 1); tris.Add(b + 3); tris.Add(b + 2);
         }
 
         private static void UploadMesh(
             MeshFilter filter,
             List<Vector3> verts, List<Vector2> uvs,
-            List<Color> primColors, List<Vector4> secColors,
-            List<int> tris)
+            List<Color> colors, List<Vector4> flags,
+            List<List<int>> layerTris)
         {
             var mesh = filter.sharedMesh;
             if (mesh == null)
@@ -226,9 +238,11 @@ namespace Dungeon.Visuals
             mesh.Clear();
             mesh.SetVertices(verts);
             mesh.SetUVs(0, uvs);
-            mesh.SetColors(primColors);
-            mesh.SetUVs(1, secColors);   // TEXCOORD1 → secondary tint in shader
-            mesh.SetTriangles(tris, 0);
+            mesh.SetColors(colors);
+            mesh.SetUVs(1, flags);    // TEXCOORD1 → invert flag in shader
+            mesh.subMeshCount = layerTris.Count;
+            for (int i = 0; i < layerTris.Count; i++)
+                mesh.SetTriangles(layerTris[i], i);
             mesh.RecalculateBounds();
         }
     }
