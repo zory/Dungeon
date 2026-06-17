@@ -6,9 +6,9 @@ namespace Dungeon.Visuals.Authoring
     [RequireComponent(typeof(Camera))]
     public class CameraAuthoring : MonoBehaviour
     {
-        [SerializeField] private float _minZoom = 2f;
-        [SerializeField] private float _maxZoom = 20f;
-        [SerializeField] private float _defaultZoom = 8f;
+        [SerializeField] private float _minZoom = 1f;
+        [SerializeField] private float _maxZoom = 10f;
+        [SerializeField] private float _defaultZoom = 4f;
         [SerializeField] private float _zoomSpeed = 3f;
 
         public Camera Camera => GetComponent<Camera>();

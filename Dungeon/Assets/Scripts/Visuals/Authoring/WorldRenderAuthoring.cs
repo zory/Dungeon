@@ -8,6 +8,7 @@ namespace Dungeon.Visuals.Authoring
         [SerializeField] private DualGridAtlas _atlas;
         [SerializeField] private TileColorRegistry _colorRegistry;
         [SerializeField] private Material _material;
+        [SerializeField] private int _chunkUnloadRadius = 4;
 
         // Chunks will be parented under this transform.
         public Transform ChunkParent => transform;
@@ -17,6 +18,7 @@ namespace Dungeon.Visuals.Authoring
             Atlas = _atlas,
             ColorRegistry = _colorRegistry,
             Material = _material,
+            ChunkUnloadRadius = _chunkUnloadRadius,
         };
     }
 }

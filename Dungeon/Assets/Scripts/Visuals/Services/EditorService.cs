@@ -200,7 +200,7 @@ namespace Dungeon.Visuals.Services
 
             LevelName = data.Metadata.Name;
 
-            _world.Get<WorldRenderService>().RebuildAll();
+            _world.Get<WorldRenderService>().RebuildForCurrentView();
         }
 
         private void SpawnAndRegisterObject(ObjectData data)

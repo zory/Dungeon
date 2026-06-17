@@ -16,9 +16,9 @@ namespace Dungeon.Visuals.Services
 
         public static CameraConfig Default => new CameraConfig
         {
-            MinZoom = 2f,
-            MaxZoom = 20f,
-            DefaultZoom = 8f,
+            MinZoom = 1f,
+            MaxZoom = 10f,
+            DefaultZoom = 4f,
             ZoomSpeed = 3f,
         };
     }

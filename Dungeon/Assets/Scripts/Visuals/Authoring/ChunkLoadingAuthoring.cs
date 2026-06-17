@@ -5,7 +5,7 @@ namespace Dungeon.Visuals.Authoring
 {
     public class ChunkLoadingAuthoring : MonoBehaviour
     {
-        [SerializeField] private int _chunkViewRadius = 3;
+        [SerializeField] private int _chunkViewRadius = 2;
 
         public ChunkLoadingConfig GetConfig() => new ChunkLoadingConfig
         {

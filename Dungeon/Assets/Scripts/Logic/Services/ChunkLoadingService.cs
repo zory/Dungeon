@@ -10,7 +10,7 @@ namespace Dungeon.Logic.Services
     {
         public int ChunkViewRadius;
 
-        public static ChunkLoadingConfig Default => new ChunkLoadingConfig { ChunkViewRadius = 3 };
+        public static ChunkLoadingConfig Default => new ChunkLoadingConfig { ChunkViewRadius = 2 };
     }
 
     public class ChunkLoadingService : ILogicService
@@ -104,6 +104,28 @@ namespace Dungeon.Logic.Services
                 grid.SetCell(new Vector3Int(wx, elevation, wz), new Cell(tileId));
             }
         }
+
+        // Returns true if cell data has already been generated for the given chunk at the given elevation.
+        public bool IsChunkLoaded(int chunkX, int elevation, int chunkZ)
+        {
+            return _loadedChunks.Contains(new Vector3Int(chunkX, elevation, chunkZ));
+        }
+
+        // Marks a chunk as loaded without generating it.
+        // Used when populating the grid from a save file — the cells are already in the grid.
+        public void MarkChunkLoaded(int chunkX, int elevation, int chunkZ)
+        {
+            _loadedChunks.Add(new Vector3Int(chunkX, elevation, chunkZ));
+        }
+
+        // Clears all chunk tracking state. Call before loading a save file.
+        public void Reset()
+        {
+            _loadedChunks.Clear();
+            _lastCenterChunk = new Vector2Int(int.MinValue, int.MinValue);
+        }
+
+        public int ChunkViewRadius => _config.ChunkViewRadius;
 
         public void Dispose() { }
     }

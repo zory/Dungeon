@@ -3,7 +3,9 @@
     "rootNamespace": "Dungeon.UI",
     "references": [
         "Dungeon.Logic",
-        "Dungeon.Visuals"
+        "Dungeon.Visuals",
+        "GUID:e449549eb179c2e4c83f69b234d3703f",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

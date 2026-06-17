@@ -1,4 +1,6 @@
+using Dungeon.Logic;
 using Dungeon.Logic.Core;
+using Dungeon.Logic.Serialisation;
 using Dungeon.Logic.Services;
 using Dungeon.Visuals.Authoring;
 using Dungeon.Visuals.Core;
@@ -11,11 +13,17 @@ namespace Dungeon.Visuals
     // No other MonoBehaviour should run game logic — only Authoring components for inspector config.
     public class GameBootstrapper : MonoBehaviour
     {
+        public static GameBootstrapper Instance { get; private set; }
+
         private LogicWorld _logicWorld;
         private VisualWorld _visualWorld;
 
+        public LogicWorld LogicWorld => _logicWorld;
+
         private void Awake()
         {
+            Instance = this;
+
             _logicWorld = new LogicWorld();
             _visualWorld = new VisualWorld(_logicWorld);
 
@@ -27,6 +35,13 @@ namespace Dungeon.Visuals
 
             // Register characters after services are initialized.
             RegisterCharacters();
+
+            // If loading a saved game, populate the grid from save data.
+            if (GameSession.Mode == GameSession.StartMode.LoadGame && GameSession.LoadedSaveData != null)
+            {
+                ApplySaveData(GameSession.LoadedSaveData);
+                GameSession.LoadedSaveData = null;
+            }
         }
 
         private void Update()
@@ -40,6 +55,7 @@ namespace Dungeon.Visuals
         {
             _visualWorld?.DisposeAll();
             _logicWorld?.DisposeAll();
+            if (Instance == this) { Instance = null; }
         }
 
         // ── Logic Services (deterministic order) ───────────────────────────────────────
@@ -54,6 +70,18 @@ namespace Dungeon.Visuals
             // 2. WorldGenerationService — procedural terrain
             var worldGenAuthoring = FindAnyObjectByType<WorldGenerationAuthoring>();
             var worldGenConfig = worldGenAuthoring != null ? worldGenAuthoring.GetConfig() : WorldGenerationConfig.Default;
+
+            // Override seed based on GameSession mode.
+            if (GameSession.Mode == GameSession.StartMode.NewGame)
+            {
+                worldGenConfig.RandomizeSeed = true;
+            }
+            else if (GameSession.Mode == GameSession.StartMode.LoadGame && GameSession.LoadedSaveData != null)
+            {
+                worldGenConfig.RandomizeSeed = false;
+                worldGenConfig.Seed = GameSession.LoadedSaveData.Seed;
+            }
+
             _logicWorld.Register(new WorldGenerationService(worldGenConfig));
 
             // 3. ChunkLoadingService — infinite chunk streaming
@@ -129,6 +157,31 @@ namespace Dungeon.Visuals
             {
                 characterService.AddCharacter(authoring.GetConfig(), authoring.SpriteRenderer);
             }
+        }
+
+        // ── Save Data ──────────────────────────────────────────────────────────────────
+
+        private void ApplySaveData(SaveData saveData)
+        {
+            GridService grid = _logicWorld.Get<GridService>();
+            ChunkLoadingService chunkLoader = _logicWorld.Get<ChunkLoadingService>();
+
+            grid.Grid.Clear();
+            chunkLoader.Reset();
+
+            foreach (CellData cellData in saveData.Cells)
+            {
+                Vector3Int coord = new Vector3Int(cellData.X, cellData.Y, cellData.Z);
+                grid.Grid.SetCell(coord, new Cell(cellData.TileTypeId));
+
+                // Mark the chunk containing this cell as loaded so it won't be regenerated.
+                Vector2Int chunkCoord = GridService.CellToChunk(cellData.X, cellData.Z);
+                chunkLoader.MarkChunkLoaded(chunkCoord.x, cellData.Y, chunkCoord.y);
+            }
+
+            // Rebuild visual chunks around camera.
+            _visualWorld.Get<WorldRenderService>().RebuildForCurrentView();
+            Debug.Log($"[GameBootstrapper] Loaded save data: {saveData.Cells.Count} cells, seed={saveData.Seed}");
         }
     }
 }

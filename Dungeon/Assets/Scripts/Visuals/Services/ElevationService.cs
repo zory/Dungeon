@@ -45,9 +45,9 @@ namespace Dungeon.Visuals.Services
             var camera = _world.Get<CameraService>();
             camera.SyncGroundPlane();
 
-            // Rebuild all visible chunks at the new elevation.
+            // Rebuild only chunks around camera at the new elevation.
             var worldRender = _world.Get<WorldRenderService>();
-            worldRender.RebuildAll();
+            worldRender.RebuildForCurrentView();
 
             Debug.Log($"[ElevationService] Elevation → {elevation}");
         }

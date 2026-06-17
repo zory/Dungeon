@@ -1,11 +1,15 @@
 {
-    "name": "Dungeon.Visuals",
-    "rootNamespace": "Dungeon.Visuals",
+    "name": "Dungeon.Editor",
+    "rootNamespace": "Dungeon.Editor",
     "references": [
-        "Unity.InputSystem",
-        "Dungeon.Logic"
+        "Dungeon.Logic",
+        "Dungeon.Visuals",
+        "Dungeon.UI",
+        "GUID:e449549eb179c2e4c83f69b234d3703f"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

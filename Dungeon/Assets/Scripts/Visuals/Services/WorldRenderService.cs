@@ -13,6 +13,9 @@ namespace Dungeon.Visuals.Services
         public DualGridAtlas Atlas;
         public TileColorRegistry ColorRegistry;
         public Material Material;
+        public int ChunkUnloadRadius;
+
+        public static WorldRenderConfig Default => new WorldRenderConfig { ChunkUnloadRadius = 4 };
     }
 
     public class WorldRenderService : IVisualService
@@ -22,8 +25,10 @@ namespace Dungeon.Visuals.Services
         private VisualWorld _world;
         private GridService _grid;
         private ChunkLoadingService _chunkLoader;
+        private CameraService _camera;
 
         private readonly Dictionary<Vector2Int, DualGridChunkRenderer> _chunks = new();
+        private Vector2Int _lastRenderCenter = new(int.MinValue, int.MinValue);
 
         public WorldRenderService(WorldRenderConfig config, Transform chunkParent)
         {
@@ -36,10 +41,51 @@ namespace Dungeon.Visuals.Services
             _world = world;
             _grid = world.GetLogic<GridService>();
             _chunkLoader = world.GetLogic<ChunkLoadingService>();
+            _camera = world.Get<CameraService>();
             _chunkLoader.OnChunksLoaded += OnChunksLoaded;
         }
 
-        public void Tick(float deltaTime) { }
+        public void Tick(float deltaTime)
+        {
+            Vector2Int center = _grid.WorldToChunk(_camera.Camera.transform.position);
+            if (center == _lastRenderCenter) { return; }
+            _lastRenderCenter = center;
+
+            int viewRadius = _chunkLoader.ChunkViewRadius;
+            int unloadRadius = _config.ChunkUnloadRadius > 0 ? _config.ChunkUnloadRadius : viewRadius + 2;
+
+            // Unload renderers beyond unload radius.
+            var toRemove = new List<Vector2Int>();
+            foreach (Vector2Int key in _chunks.Keys)
+            {
+                int dx = Mathf.Abs(key.x - center.x);
+                int dz = Mathf.Abs(key.y - center.y);
+                if (dx > unloadRadius || dz > unloadRadius)
+                {
+                    toRemove.Add(key);
+                }
+            }
+            foreach (Vector2Int key in toRemove)
+            {
+                if (_chunks.TryGetValue(key, out DualGridChunkRenderer chunk) && chunk != null)
+                {
+                    UnityEngine.Object.Destroy(chunk.gameObject);
+                }
+                _chunks.Remove(key);
+            }
+
+            // Re-render chunks within view radius that have data but no renderer.
+            int elevation = _grid.Elevation;
+            for (int cx = center.x - viewRadius; cx <= center.x + viewRadius; cx++)
+            for (int cz = center.y - viewRadius; cz <= center.y + viewRadius; cz++)
+            {
+                Vector2Int coord = new Vector2Int(cx, cz);
+                if (!_chunks.ContainsKey(coord) && _chunkLoader.IsChunkLoaded(cx, elevation, cz))
+                {
+                    SpawnChunk(coord);
+                }
+            }
+        }
 
         private void OnChunksLoaded(IReadOnlyList<Vector2Int> newChunks)
         {
@@ -94,23 +140,25 @@ namespace Dungeon.Visuals.Services
                 SpawnChunk(chunkCoord);
         }
 
-        // Destroys all chunk GameObjects and respawns only chunks that have cells
-        // at the currently active elevation layer.
-        public void RebuildAll()
+        // Clears all renderers, then spawns only chunks around camera at current elevation.
+        // O(viewRadius²) — independent of total world size.
+        public void RebuildForCurrentView()
         {
-            int elevation = _grid.Elevation;
-
-            var occupiedChunks = new HashSet<Vector2Int>();
-            foreach (Vector3Int coord in _grid.Grid.GetAllCoordinates())
-            {
-                if (coord.y == elevation)
-                    occupiedChunks.Add(GridService.CellToChunk(coord.x, coord.z));
-            }
-
             ClearChunks();
 
-            foreach (Vector2Int chunkCoord in occupiedChunks)
-                SpawnChunk(chunkCoord);
+            Vector2Int center = _grid.WorldToChunk(_camera.Camera.transform.position);
+            _lastRenderCenter = center;
+            int viewRadius = _chunkLoader.ChunkViewRadius;
+            int elevation = _grid.Elevation;
+
+            for (int cx = center.x - viewRadius; cx <= center.x + viewRadius; cx++)
+            for (int cz = center.y - viewRadius; cz <= center.y + viewRadius; cz++)
+            {
+                if (_chunkLoader.IsChunkLoaded(cx, elevation, cz))
+                {
+                    SpawnChunk(new Vector2Int(cx, cz));
+                }
+            }
         }
 
         private void ClearChunks()

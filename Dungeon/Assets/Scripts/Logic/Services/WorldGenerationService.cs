@@ -53,11 +53,15 @@ namespace Dungeon.Logic.Services
         private readonly float _hx, _hz; // height noise offset
         private readonly float _mx, _mz; // tree / moisture noise offset
 
+        // The effective seed used for generation (after randomisation).
+        public int Seed { get; private set; }
+
         public WorldGenerationService(WorldGenerationConfig config)
         {
             _config = config;
 
             int seed = config.RandomizeSeed ? UnityEngine.Random.Range(int.MinValue, int.MaxValue) : config.Seed;
+            Seed = seed;
             var rng = new System.Random(seed);
             _hx = (float)rng.NextDouble() * 99999f;
             _hz = (float)rng.NextDouble() * 99999f;
