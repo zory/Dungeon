@@ -87,3 +87,10 @@ crashlytics-build.properties
 
 # Claude Code local settings
 settings.local.json
+
+# Agent worktrees (ephemeral, not tracked)
+/worktrees/*
+!/worktrees/.gitkeep
+
+# Test artifacts
+/artifacts/
