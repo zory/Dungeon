@@ -19,9 +19,8 @@
 ## What You Manage
 
 - **docs/** — Fill and update direction files. Agents read these for context.
-- **todo/** — Your personal task list. Create `.md` files for each task. Move to `todo/done/` when complete.
 - **Git** — You commit, push, and merge. Agents never do this automatically.
-- **Assets** — Art, audio, and visual design decisions are always yours.
+- **Assets** — Art, audio, and visual design decisions are always yours. But only actual assets, their behaviour is agents responsibility.
 
 ## Task Flow
 

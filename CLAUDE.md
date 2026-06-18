@@ -7,7 +7,7 @@ Read this first. Read `docs/` files only when relevant to the current task.
 
 - **Engine:** Unity 6 (6000.4.7f1), C#, URP, Input System
 - **Genre:** 2D top-down dungeon management game
-- **Concept:** Two brothers — one living (shopkeeper/villager), one dead (dungeon explorer)
+- **Concept:** Two brothers — one living (shopkeeper/villager), one dead (dungeon builder)
 - **Platform:** PC (Windows primary)
 
 ## Repository Structure
@@ -16,11 +16,9 @@ Read this first. Read `docs/` files only when relevant to the current task.
 Dungeon/          # Unity project (the only Unity project folder)
 docs/             # Project direction, architecture, design docs (owner-maintained)
 tasks/            # Agent task tracking: backlog/ → active/ → review/ → completed/
-todo/             # Owner's personal tasks (assets, decisions) — owner-managed
 worktrees/        # Git worktrees for agent branches (gitignored)
 scripts/          # PowerShell helper scripts
 Submodules/       # Shared code packages (FactorialFunShared)
-Shaders/          # External shader code
 .claude/agents/   # Agent definitions (manager, programmer, reviewer, tester)
 ```
 
@@ -78,7 +76,7 @@ Shaders/          # External shader code
 
 ## Testing
 
-- Tests go in `Dungeon.Tests.EditMode` (references Logic) or `Dungeon.Tests.PlayMode` (references Logic)
+- Tests go in `Dungeon.Tests.EditMode` (references Logic) or `Dungeon.Tests.PlayMode` (references Logic). If tests are testing submodule features, then there is tests asmef in submodule esxisting project.
 - Prioritize: pure Logic tests, grid behaviour, serialization, determinism
 - Use `scripts/run-unity-tests.ps1` for batch test execution
 - CI runs on GitHub Actions via game-ci/unity-test-runner
@@ -105,7 +103,6 @@ Never launch more than one worker concurrently.
 | `docs/ARCHITECTURE.md` | Technical architecture details | Owner + Manager |
 | `docs/GAME_DESIGN.md` | Game mechanics, loops, content design | Owner |
 | `docs/STYLE_GUIDE.md` | Code and art style rules | Owner |
-| `docs/ROADMAP.md` | Phase plan and milestones | Owner + Manager |
 | `docs/CURRENT_STATUS.md` | What is done, what is next, blockers | Manager |
 | `docs/TESTING.md` | Test strategy and coverage | Manager + Tester |
 | `docs/OWNER_WORKFLOW.md` | How to use this system | Owner reference |

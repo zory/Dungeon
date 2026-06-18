@@ -1,12 +1,5 @@
 # Testing Strategy
 
-## Test Assemblies
-
-| Assembly | Type | References |
-|----------|------|------------|
-| `Dungeon.Tests.EditMode` | Editor-only tests | Dungeon.Logic |
-| `Dungeon.Tests.PlayMode` | Runtime tests | Dungeon.Logic |
-
 ## Priority Areas
 
 1. Pure Logic tests (Grid, Cell, WorldObject, Features)
@@ -21,9 +14,6 @@
 
 ## Coverage
 
-<!-- Tester: update as test coverage grows. -->
-
-## Current Test Files
-
-- `Assets/Tests/EditMode/SampleEditModeTests.cs` — placeholder
-- `Assets/Tests/PlayMode/SamplePlayModeTests.cs` — placeholder
+- Unity tests should cover all logic parts and all features.
+- Entire game flow should be testable as well. So it is possible from code and save file to restore any scenario and test any scenario. For example it is possible to check if quest X can be completed (several systems are integrated together and changed in order to to pass). Game flow tests should be done later in the project as that really depends on the content of the game and not only on features and framework, but entire system and tests should be made with that in mind.
+- If feature is inside submodule, then tests should be inside that submodule as well. In case of FactorialFunShared submodule inside there is Unity project with tests folders as well, so all tests should be included in that project.

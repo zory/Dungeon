@@ -1,7 +1,5 @@
 # Style Guide
 
-<!-- Owner: fill with code and art style rules. -->
-
 ## Code Style
 
 - Explicit types everywhere unless the line becomes unwieldy
@@ -15,12 +13,15 @@
 
 ## Art Style
 
-<!-- Describe the visual style, palette, pixel density, etc. -->
+2D TopDown with slight angle upwards. Similar how Stardew Valley looks like.
+2D image style is simplistic, hand painted with black thin outlines. Flat colors. Can be animated both with tweens or with sprite sheets or with bone animations.
+Characters are a bit more complex, but board game figure style with platform under their legs. Animated with tweens for movements and simple bone based animations for idling, fighting and so on.
+Custom lightning, shadows and black and white colors matters a lot. And vivid colors where colors exists. Darkness is pitch black without colors but white outlines in black, while in light vivid colors with black outlines. Lightning is not fading it is either pitch black or fully lit.
 
 ## UI Style
 
-<!-- Describe UI conventions, fonts, layout rules. -->
+Canvas style UI which separate panels for separate features. Each panel can be dragged, closed, opened in settings. This is true until game will be playable, this will be work in progress UI, feature based UI.
 
 ## Audio Style
 
-<!-- Describe sound and music direction. -->
+NONE YET
