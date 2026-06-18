@@ -5,7 +5,7 @@
 
 ## Vision
 
-<!-- What is the game? One paragraph pitch. -->
+Cosy management and slice of life adventure game
 
 ## Core Pillars
 

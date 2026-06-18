@@ -7,6 +7,11 @@ Services can have state and initial parameters, but they are provided from monob
 Entire architecture is split into logic (non unity, no monobehaviours) entire game logic and state should be here. Entire game should be possible to run only with logic if input replaced with some kind of cammand line for example.
 Input and visuals are in visuals which basically registers to logic and calls logic public api
 UI basically registers to logic and visuals and calls their public api.
+Each system have service which controls its instances. WorldObject can contain multiple types and can belong to multiple systems. One system can reference another system, but preferably not
+Most of the things should be quite generic. For example character should basically be same character just one character is controlled by some script of ai, while another by player, but via same interfaces.
+World editor is important part of the game authoring. Almost everything should be authorable and created in unity inspector, have its own parameters for authoring, images dragged and so on and from there it is serialized into save file and can be fully restored into game state. Any moment in game can be fully recreated with save file.
+For dialogs I will use inkle. Most dialog system will be ui popups with images.
+Game will be moddable so most of the things will be converted to lua later on, but this is final strech goal.
 
 ## Guiding Principles
 
@@ -39,12 +44,13 @@ Dungeon.UI            (depends on both — currently empty)
 
 ## Grid & World
 
-<!-- Describe the sparse grid, elevation layers, chunk streaming. -->
+Grid is endless. It can have different elevations. One elevation at a time is enought to see. Grid can be generated or drawn in editor or deserialized from save file.
+Each grid cell can have world object associated. One object can be in multiple cells at once (bigger object), but not vise versa. It might be different later on, but for now one object at one time. Also cell can have 2 types (two layers) of ground. One ground is native ground like water, grass, and on top of that special layer like stone path.
 
 ## Save / Load
 
-<!-- Describe LevelData format, level files, runtime save. -->
+Any logical state can be saved or be loaded into logic. From any logic state visuals and ui can be loaded.
 
 ## Level Editor
 
-<!-- Describe editor data flow, tools, serialization. -->
+Authoring is super important. Creating worldObjects, drawing world, changing elevation, creating dialogs, basically entire game should have authoring tools. Inspector and editor windows are enough for now, dont need UI for everything
