@@ -1,44 +1,39 @@
-using Dungeon.Logic.Services;
-using UnityEngine;
+using System;
+using System.Collections.Generic;
 
 namespace Dungeon.Logic
 {
-    // Feature: this WorldObject can initiate interactions.
-    // TryInteract finds the closest Interactable WorldObject within Range and triggers it.
+    // Feature: this WorldObject can interact with adjacent Interactables.
+    //
+    // Entries define which interaction TypeIds this object can initiate.
+    // Each entry has a TypeId and an optional callback that fires when interaction succeeds.
+    // A pickaxe with TypeId=10 can only interact with Interactables that also have TypeId=10.
     public class Interactor
     {
-        private readonly WorldObject _owner;
+        private readonly List<InteractorEntry> _entries = new();
 
-        public float Range { get; set; } = 2f;
+        public IReadOnlyList<InteractorEntry> Entries => _entries;
 
-        public Interactor(WorldObject owner, float range = 2f)
+        // Add an interactor capability. TypeId must match an Interactable's entry for interaction.
+        public void AddEntry(int typeId, Action onInteract = null)
         {
-            _owner = owner;
-            Range  = range;
+            _entries.Add(new InteractorEntry { TypeId = typeId, OnInteract = onInteract });
         }
 
-        public void TryInteract(WorldObjectService registry)
+        // Returns true if this interactor has at least one entry with the given TypeId.
+        public bool HasTypeId(int typeId)
         {
-            WorldObject closest     = null;
-            float       closestDist = float.MaxValue;
-
-            foreach (var obj in registry.All.Values)
+            for (int i = 0; i < _entries.Count; i++)
             {
-                if (obj == _owner) continue;
-                if (!obj.HasFeature<Interactable>()) continue;
-
-                float dist = Vector3.Distance(_owner.WorldPosition, obj.WorldPosition);
-                if (dist <= Range && dist < closestDist)
-                {
-                    closest     = obj;
-                    closestDist = dist;
-                }
+                if (_entries[i].TypeId == typeId) { return true; }
             }
-
-            if (closest == null) return;
-
-            Debug.Log($"{_owner.Name} interacts with {closest.Name}");
-            closest.GetFeature<Interactable>().NotifyInteracted(_owner);
+            return false;
         }
+    }
+
+    public struct InteractorEntry
+    {
+        public int TypeId;
+        public Action OnInteract;
     }
 }

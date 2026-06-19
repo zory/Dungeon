@@ -43,14 +43,16 @@ namespace Dungeon.Logic
         }
 
         // ── Position ───────────────────────────────────────────────────────────────────
-        // Called by Locomotion (and any other feature that needs to move this object).
+        // Called by MovementService (and registration code) to update position and cell.
         public void SetPosition(Vector3 position, float cellSize, Vector2 xzOffset, int elevation)
         {
             WorldPosition = position;
             CellCoords    = ComputeCell(position, cellSize, xzOffset, elevation);
         }
 
-        private static Vector3Int ComputeCell(Vector3 pos, float cellSize, Vector2 xzOffset, int elevation) =>
+        // Converts a world position to the cell coordinate it falls within.
+        // Shared by MovementService for collision checks.
+        internal static Vector3Int ComputeCell(Vector3 pos, float cellSize, Vector2 xzOffset, int elevation) =>
             new Vector3Int(
                 Mathf.FloorToInt((pos.x - xzOffset.x) / cellSize),
                 elevation,

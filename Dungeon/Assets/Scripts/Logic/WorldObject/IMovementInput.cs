@@ -7,7 +7,7 @@ namespace Dungeon.Logic
     public interface IMovementInput
     {
         // Direction on the XZ plane.  Components are in [-1, 1].
-        // Locomotion normalises vectors whose magnitude exceeds 1.
+        // MovementService normalises vectors whose magnitude exceeds 1.
         Vector2 GetMovementInput();
     }
 }

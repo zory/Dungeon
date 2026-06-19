@@ -33,7 +33,10 @@ namespace Dungeon.Visuals
             _logicWorld.InitializeAll();
             _visualWorld.InitializeAll();
 
-            // Register characters after services are initialized.
+            // Register world objects (static entities) and their features.
+            RegisterWorldObjects();
+
+            // Register characters and wire player input.
             RegisterCharacters();
 
             // If loading a saved game, populate the grid from save data.
@@ -89,8 +92,17 @@ namespace Dungeon.Visuals
             var chunkLoadingConfig = chunkLoadingAuthoring != null ? chunkLoadingAuthoring.GetConfig() : ChunkLoadingConfig.Default;
             _logicWorld.Register(new ChunkLoadingService(chunkLoadingConfig));
 
-            // 4. WorldObjectService — entity registry
+            // 4. WorldObjectService — entity registry + cell occupancy
             _logicWorld.Register(new WorldObjectService());
+
+            // 5. ObstacleService — tracks impassable cells
+            _logicWorld.Register(new ObstacleService());
+
+            // 6. InteractionService — tracks interactable cells, resolves interactions
+            _logicWorld.Register(new InteractionService());
+
+            // 7. MovementService — processes all movers, resolves obstacle collision
+            _logicWorld.Register(new MovementService());
         }
 
         // ── Visual Services (deterministic order) ──────────────────────────────────────
@@ -132,10 +144,13 @@ namespace Dungeon.Visuals
             var highlightConfig = highlightAuthoring != null ? highlightAuthoring.GetConfig() : GridHighlightConfig.Default;
             _visualWorld.Register(new GridHighlightService(highlightConfig));
 
-            // 7. CharacterService — character entity creation + visual sync
+            // 7. PlayerInputService — keyboard input for the controlled object
+            _visualWorld.Register(new PlayerInputService());
+
+            // 8. CharacterService — character entity creation + visual sync
             _visualWorld.Register(new CharacterService());
 
-            // 8. EditorService — paint/erase/place tools
+            // 9. EditorService — paint/erase/place tools
             var editorAuthoring = FindAnyObjectByType<EditorAuthoring>();
             if (editorAuthoring != null)
             {
@@ -147,16 +162,107 @@ namespace Dungeon.Visuals
             }
         }
 
+        // ── WorldObject Registration ──────────────────────────────────────────────────
+
+        private void RegisterWorldObjects()
+        {
+            WorldObjectService objectService = _logicWorld.Get<WorldObjectService>();
+            ObstacleService obstacleService = _logicWorld.Get<ObstacleService>();
+            InteractionService interactionService = _logicWorld.Get<InteractionService>();
+            GridService gridService = _logicWorld.Get<GridService>();
+
+            WorldObjectAuthoring[] authorings = FindObjectsByType<WorldObjectAuthoring>(FindObjectsInactive.Exclude);
+            foreach (WorldObjectAuthoring authoring in authorings)
+            {
+                // Create logic entity from authoring data.
+                Vector3 worldPos = authoring.transform.position;
+                var obj = new Logic.WorldObject(authoring.ObjectName, worldPos);
+                obj.SetPosition(worldPos, gridService.CellSize, gridService.XZOffset, gridService.Elevation);
+
+                // Footprint — which cells this object occupies.
+                obj.AddFeature(new Logic.Footprint(authoring.OccupiedCells));
+
+                objectService.Register(obj);
+                objectService.OccupyCells(obj);
+
+                // If this object has a Mover, it can move.
+                MoverAuthoring moverAuthoring = authoring.GetComponent<MoverAuthoring>();
+                if (moverAuthoring != null)
+                {
+                    obj.AddFeature(new Logic.Mover(moverAuthoring.MaxSpeed, moverAuthoring.Acceleration));
+                }
+
+                // If this object is an obstacle, register blocked cells.
+                ObstacleAuthoring obstacleAuthoring = authoring.GetComponent<ObstacleAuthoring>();
+                if (obstacleAuthoring != null)
+                {
+                    obj.AddFeature(new Logic.Obstacle(obstacleAuthoring.BlockedCells));
+                    obstacleService.RegisterObstacle(obj);
+                }
+
+                // Wire interactable and interactor from authoring components.
+                WireInteractable(obj, authoring.gameObject, interactionService);
+                WireInteractor(obj, authoring.gameObject);
+            }
+        }
+
         // ── Character Registration ─────────────────────────────────────────────────────
 
         private void RegisterCharacters()
         {
-            var characterService = _visualWorld.Get<CharacterService>();
-            var authorings = FindObjectsByType<CharacterAuthoring>(FindObjectsInactive.Exclude);
-            foreach (var authoring in authorings)
+            CharacterService characterService = _visualWorld.Get<CharacterService>();
+            PlayerInputService playerInput = _visualWorld.Get<PlayerInputService>();
+            WorldObjectService objectService = _logicWorld.Get<WorldObjectService>();
+            InteractionService interactionService = _logicWorld.Get<InteractionService>();
+
+            CharacterAuthoring[] authorings = FindObjectsByType<CharacterAuthoring>(FindObjectsInactive.Exclude);
+            foreach (CharacterAuthoring authoring in authorings)
             {
-                characterService.AddCharacter(authoring.GetConfig(), authoring.SpriteRenderer);
+                CharacterConfig config = authoring.GetConfig();
+                int objectId = characterService.AddCharacter(config, authoring.SpriteRenderer);
+                Logic.WorldObject obj = objectService.Get(objectId);
+
+                // Wire interactable and interactor from authoring components on the character prefab.
+                WireInteractable(obj, authoring.gameObject, interactionService);
+                WireInteractor(obj, authoring.gameObject);
+
+                // Wire the first player-controlled character to the input handler.
+                if (config.IsPlayerControlled && playerInput.ControlledObjectId < 0)
+                {
+                    playerInput.SetControlledObject(objectId);
+                }
             }
+        }
+
+        // ── Interaction Wiring Helpers ──────────────────────────────────────────────────
+
+        private static void WireInteractable(Logic.WorldObject obj, GameObject go, InteractionService interactionService)
+        {
+            InteractableAuthoring interactableAuthoring = go.GetComponent<InteractableAuthoring>();
+            if (interactableAuthoring == null) { return; }
+
+            var interactable = new Logic.Interactable(interactableAuthoring.InteractableCells, interactableAuthoring.AllowSelfInteraction);
+            foreach (InteractableAuthoring.InteractableEntryData entry in interactableAuthoring.Entries)
+            {
+                System.Action callback = entry.Callback != null ? entry.Callback.Execute : null;
+                interactable.AddEntry(entry.TypeId, callback);
+            }
+            obj.AddFeature(interactable);
+            interactionService.RegisterInteractable(obj);
+        }
+
+        private static void WireInteractor(Logic.WorldObject obj, GameObject go)
+        {
+            InteractorAuthoring interactorAuthoring = go.GetComponent<InteractorAuthoring>();
+            if (interactorAuthoring == null) { return; }
+
+            var interactor = new Logic.Interactor();
+            foreach (InteractorAuthoring.InteractorEntryData entry in interactorAuthoring.Entries)
+            {
+                System.Action callback = entry.Callback != null ? entry.Callback.Execute : null;
+                interactor.AddEntry(entry.TypeId, callback);
+            }
+            obj.AddFeature(interactor);
         }
 
         // ── Save Data ──────────────────────────────────────────────────────────────────

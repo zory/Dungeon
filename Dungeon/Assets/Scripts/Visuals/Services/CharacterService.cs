@@ -4,7 +4,6 @@ using Dungeon.Logic;
 using Dungeon.Logic.Services;
 using Dungeon.Visuals.Core;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace Dungeon.Visuals.Services
 {
@@ -13,7 +12,6 @@ namespace Dungeon.Visuals.Services
     {
         public string Name;
         public float WalkSpeed;
-        public float InteractRange;
         public bool IsPlayerControlled;
 
         public Sprite SpriteDown;
@@ -25,98 +23,78 @@ namespace Dungeon.Visuals.Services
         public Vector3 SpawnPosition;
     }
 
+    // Visual service: creates character entities and syncs their sprites/transforms.
+    // Input is handled by PlayerInputService — this service only does visuals.
     public class CharacterService : IVisualService
     {
-        private VisualWorld _world;
-        private GridService _grid;
         private WorldObjectService _objects;
 
         private readonly List<CharacterInstance> _characters = new();
 
         public void Initialize(VisualWorld world)
         {
-            _world = world;
-            _grid = world.GetLogic<GridService>();
             _objects = world.GetLogic<WorldObjectService>();
         }
 
-        public void AddCharacter(CharacterConfig config, SpriteRenderer spriteRenderer)
+        // Creates a character WorldObject with a Mover feature.
+        // Interactor/Interactable are added by the bootstrapper from authoring components.
+        // Returns the assigned object ID (used to wire PlayerInputService).
+        public int AddCharacter(CharacterConfig config, SpriteRenderer spriteRenderer)
         {
             var obj = new WorldObject(config.Name, config.SpawnPosition);
             int id = _objects.Register(obj);
-            obj.AddFeature(new Locomotion(obj, config.WalkSpeed));
-            obj.AddFeature(new Interactable());
-            obj.AddFeature(new Interactor(obj, config.InteractRange));
+            obj.AddFeature(new Mover(config.WalkSpeed));
 
             _characters.Add(new CharacterInstance
             {
                 ObjectId = id,
                 Config = config,
                 SpriteRenderer = spriteRenderer,
-                Facing = Facing.Down,
+                CurrentFacing = Facing.Down,
             });
 
             ApplySprite(_characters[_characters.Count - 1]);
+            return id;
         }
 
         public void Tick(float deltaTime)
         {
             for (int i = 0; i < _characters.Count; i++)
             {
-                var ch = _characters[i];
-                if (!_objects.TryGet(ch.ObjectId, out var obj)) continue;
+                CharacterInstance ch = _characters[i];
+                if (!_objects.TryGet(ch.ObjectId, out WorldObject obj)) { continue; }
 
-                // Movement
-                Vector2 input = ch.Config.IsPlayerControlled ? ReadPlayerInput() : Vector2.zero;
-                if (input != Vector2.zero && obj.TryGetFeature<Locomotion>(out var loco))
+                // Update sprite facing from Mover.Facing (set by MovementService).
+                if (obj.TryGetFeature<Mover>(out Mover mover) && mover.Velocity.sqrMagnitude > 0.001f)
                 {
-                    loco.Move(input, deltaTime, _grid.CellSize, _grid.XZOffset, _grid.Elevation);
-                    UpdateFacing(ref ch, input);
-                    ApplySprite(ch);
-                    _characters[i] = ch;
-                }
-
-                // Interaction
-                if (ch.Config.IsPlayerControlled)
-                {
-                    var kb = Keyboard.current;
-                    if (kb != null && kb.eKey.wasPressedThisFrame)
+                    Facing newFacing = VectorToFacing(mover.Facing);
+                    if (newFacing != ch.CurrentFacing)
                     {
-                        obj.GetFeature<Interactor>()?.TryInteract(_objects);
+                        ch.CurrentFacing = newFacing;
+                        ApplySprite(ch);
+                        _characters[i] = ch;
                     }
                 }
 
-                // Sync visual transform to logic
-                var p = obj.WorldPosition;
-                var t = ch.SpriteRenderer.transform;
-                t.position = new Vector3(p.x, t.position.y, p.z);
+                // Sync visual transform to logic position.
+                Vector3 logicPos = obj.WorldPosition;
+                Transform t = ch.SpriteRenderer.transform;
+                t.position = new Vector3(logicPos.x, t.position.y, logicPos.z);
             }
         }
 
-        private static Vector2 ReadPlayerInput()
+        private static Facing VectorToFacing(Vector2 dir)
         {
-            var kb = Keyboard.current;
-            if (kb == null) return Vector2.zero;
-
-            float x = (kb.dKey.isPressed || kb.rightArrowKey.isPressed ? 1f : 0f)
-                    - (kb.aKey.isPressed || kb.leftArrowKey.isPressed  ? 1f : 0f);
-            float z = (kb.wKey.isPressed || kb.upArrowKey.isPressed    ? 1f : 0f)
-                    - (kb.sKey.isPressed || kb.downArrowKey.isPressed   ? 1f : 0f);
-
-            return new Vector2(x, z);
-        }
-
-        private static void UpdateFacing(ref CharacterInstance ch, Vector2 input)
-        {
-            if (Mathf.Abs(input.x) >= Mathf.Abs(input.y))
-                ch.Facing = input.x > 0f ? Facing.Right : Facing.Left;
-            else
-                ch.Facing = input.y > 0f ? Facing.Up : Facing.Down;
+            if (Mathf.Abs(dir.x) >= Mathf.Abs(dir.y))
+            {
+                return dir.x > 0f ? Facing.Right : Facing.Left;
+            }
+            return dir.y > 0f ? Facing.Up : Facing.Down;
         }
 
         private static void ApplySprite(CharacterInstance ch)
         {
-            var sprite = ch.Facing switch
+            Sprite sprite = ch.CurrentFacing switch
             {
                 Facing.Up    => ch.Config.SpriteUp,
                 Facing.Left  => ch.Config.SpriteLeft,
@@ -124,13 +102,17 @@ namespace Dungeon.Visuals.Services
                 _            => ch.Config.SpriteDown,
             };
             if (sprite != null && ch.SpriteRenderer != null)
+            {
                 ch.SpriteRenderer.sprite = sprite;
+            }
         }
 
         public void Dispose()
         {
-            foreach (var ch in _characters)
+            foreach (CharacterInstance ch in _characters)
+            {
                 _objects?.Remove(ch.ObjectId);
+            }
             _characters.Clear();
         }
 
@@ -141,7 +123,7 @@ namespace Dungeon.Visuals.Services
             public int ObjectId;
             public CharacterConfig Config;
             public SpriteRenderer SpriteRenderer;
-            public Facing Facing;
+            public Facing CurrentFacing;
         }
     }
 }
