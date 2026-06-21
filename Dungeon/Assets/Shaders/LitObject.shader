@@ -97,6 +97,12 @@ Shader "Dungeon/LitObject"
                 // Combine texture with material tint and vertex colour (Unity sprites use vertex colour for tinting/alpha).
                 half4 col = tex * _Color * i.color;
 
+                // Discard fully transparent pixels — no shadow/outline artifacts on invisible areas.
+                if (col.a < 0.01h)
+                {
+                    discard;
+                }
+
                 // Binary lighting: sample the global light map and shadow height map.
                 float2 screenUV = i.positionCS.xy / _LightMapParams.xy;
                 half baseLight = step(0.5h, SAMPLE_TEXTURE2D(_LightMap, sampler_point_clamp, screenUV).r);

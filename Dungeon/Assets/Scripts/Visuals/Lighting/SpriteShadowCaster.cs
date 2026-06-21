@@ -2,10 +2,16 @@ using UnityEngine;
 
 namespace Dungeon.Visuals.Lighting
 {
-    // Shadow caster that derives its polygon from the attached SpriteRenderer bounds.
-    // Height determines both shadow length and which objects this shadow can affect
-    // (only objects shorter than this caster will be shadowed).
+    // Shadow caster for sprite-based objects.
+    // Height determines shadow length and which shorter objects receive the shadow.
     // Also sets _ObjectHeight on the SpriteRenderer's material for shadow receiving.
+    //
+    // The shadow caster polygon is a configurable rectangle at the base of the object,
+    // NOT the full sprite bounds. This prevents transparent sprite areas from casting shadow.
+    //
+    // BaseSize: width (X) and depth (Z) of the shadow caster footprint in local units.
+    // BaseOffset: offset from the transform origin to the center of the footprint.
+    //   Typically (0, 0) places the footprint at the object's transform position (cell center).
     [RequireComponent(typeof(SpriteRenderer))]
     public class SpriteShadowCaster : MonoBehaviour
     {
@@ -17,6 +23,12 @@ namespace Dungeon.Visuals.Lighting
 
         [Tooltip("Whether this object currently casts shadows.")]
         public bool CastsShadows = true;
+
+        [Tooltip("Width and depth of the shadow caster footprint in local units.")]
+        public Vector2 BaseSize = new Vector2(1f, 0.2f);
+
+        [Tooltip("Offset from the transform origin to the center of the footprint (local XZ).")]
+        public Vector2 BaseOffset = Vector2.zero;
 
         private SpriteRenderer _spriteRenderer;
         private MaterialPropertyBlock _propertyBlock;
@@ -40,28 +52,21 @@ namespace Dungeon.Visuals.Lighting
             }
         }
 
-        // Returns the shadow caster polygon in local XZ space, derived from sprite bounds.
-        // The polygon represents the base footprint of the object on the ground.
+        // Returns the shadow caster polygon in local XZ space.
+        // A small rectangle at the configured base position, not the full sprite bounds.
         public Vector2[] GetLocalPoints()
         {
-            if (_spriteRenderer == null || _spriteRenderer.sprite == null)
-            {
-                return null;
-            }
+            float halfX = BaseSize.x * 0.5f;
+            float halfZ = BaseSize.y * 0.5f;
+            float cx = BaseOffset.x;
+            float cz = BaseOffset.y;
 
-            Bounds bounds = _spriteRenderer.sprite.bounds;
-            float halfX = bounds.extents.x;
-            // Use a thin strip at the bottom of the sprite as the shadow base.
-            float baseZ = bounds.min.y;
-            float topZ = bounds.max.y;
-
-            // Full sprite width, thin depth footprint for top-down shadow projection.
             return new Vector2[]
             {
-                new Vector2(-halfX, baseZ),
-                new Vector2(halfX, baseZ),
-                new Vector2(halfX, topZ),
-                new Vector2(-halfX, topZ)
+                new Vector2(cx - halfX, cz - halfZ),
+                new Vector2(cx + halfX, cz - halfZ),
+                new Vector2(cx + halfX, cz + halfZ),
+                new Vector2(cx - halfX, cz + halfZ)
             };
         }
 

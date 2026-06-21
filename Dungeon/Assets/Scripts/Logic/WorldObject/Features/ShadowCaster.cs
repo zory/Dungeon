@@ -16,11 +16,21 @@ namespace Dungeon.Logic
         // Only objects with height < this value will be affected by this shadow.
         public float Height { get; set; }
 
-        public ShadowCaster(Vector2[] localPoints, float maxShadowLength, float height = 1f)
+        // Whether this shadow caster is currently active. Disabled casters are skipped
+        // during shadow rendering and light queries.
+        public bool Enabled { get; set; }
+
+        // When true, the caster polygon is not rendered as a solid occluder in the light map.
+        // Only the shadow fins are drawn. Used for sprite-based casters where the sprite
+        // itself provides visual coverage and a solid polygon would darken transparent areas.
+        public bool SkipOccluder { get; set; }
+
+        public ShadowCaster(Vector2[] localPoints, float maxShadowLength, float height = 1f, bool enabled = true)
         {
             LocalPoints = localPoints;
             MaxShadowLength = maxShadowLength;
             Height = height;
+            Enabled = enabled;
         }
 
         // Returns polygon vertices transformed to world-space XZ coordinates

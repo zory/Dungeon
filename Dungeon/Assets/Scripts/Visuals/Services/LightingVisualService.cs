@@ -99,6 +99,7 @@ namespace Dungeon.Visuals.Services
 
             Vector2[] localPoints = mono.GetLocalPoints();
             var feature = new Logic.ShadowCaster(localPoints, mono.Height, mono.Height);
+            feature.SkipOccluder = true;
             obj.AddFeature(feature);
 
             _objects.Register(obj);
@@ -138,6 +139,7 @@ namespace Dungeon.Visuals.Services
                 // Update feature data.
                 feature.LocalPoints = tracked.MonoBehaviour.GetLocalPoints();
                 feature.MaxShadowLength = tracked.MonoBehaviour.MaxShadowLength;
+                feature.Enabled = tracked.MonoBehaviour.CastsShadows && tracked.MonoBehaviour.gameObject.activeInHierarchy;
             }
 
             foreach (TrackedSpriteCaster tracked in _trackedSpriteCasters)
@@ -154,6 +156,7 @@ namespace Dungeon.Visuals.Services
                 feature.LocalPoints = tracked.MonoBehaviour.GetLocalPoints();
                 feature.MaxShadowLength = tracked.MonoBehaviour.Height;
                 feature.Height = tracked.MonoBehaviour.Height;
+                feature.Enabled = tracked.MonoBehaviour.CastsShadows && tracked.MonoBehaviour.gameObject.activeInHierarchy;
             }
         }
 

@@ -401,8 +401,12 @@ namespace Dungeon.Visuals.Lighting
                         continue;
                     }
 
-                    // Add caster polygon as solid occluder.
-                    AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                    // Add caster polygon as solid occluder (skipped for sprite-based casters
+                    // where the sprite itself provides visual coverage).
+                    if (!caster.SkipOccluder)
+                    {
+                        AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                    }
 
                     // Add directional shadow fins.
                     AddDirectionalShadowFins(worldPoints, shadowDir, shadowLength, cam, screenWidth, screenHeight, vertices, triangles);
@@ -501,8 +505,11 @@ namespace Dungeon.Visuals.Lighting
                         continue;
                     }
 
-                    // Add the caster polygon itself as a solid occluder.
-                    AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                    // Add the caster polygon itself as a solid occluder (skipped for sprite-based casters).
+                    if (!caster.SkipOccluder)
+                    {
+                        AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                    }
 
                     // Find back-facing edges and extrude radial shadow fins.
                     AddRadialShadowFins(worldPoints, lightPosXZ, cam, screenWidth, screenHeight, vertices, triangles);
@@ -599,8 +606,11 @@ namespace Dungeon.Visuals.Lighting
 
                     int vertsBefore = vertices.Count;
 
-                    // Add caster polygon as solid occluder.
-                    AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                    // Add caster polygon as solid occluder (skipped for sprite-based casters).
+                    if (!caster.SkipOccluder)
+                    {
+                        AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                    }
                     // Add directional shadow fins.
                     AddDirectionalShadowFins(worldPoints, shadowDir, shadowLength, cam, screenWidth, screenHeight, vertices, triangles);
 
@@ -649,8 +659,11 @@ namespace Dungeon.Visuals.Lighting
 
                     int vertsBefore = vertices.Count;
 
-                    // Add the caster polygon as solid occluder.
-                    AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                    // Add the caster polygon as solid occluder (skipped for sprite-based casters).
+                    if (!caster.SkipOccluder)
+                    {
+                        AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                    }
                     // Add radial shadow fins.
                     AddRadialShadowFins(worldPoints, lightPosXZ, cam, screenWidth, screenHeight, vertices, triangles);
 

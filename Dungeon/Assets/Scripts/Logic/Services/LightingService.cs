@@ -30,6 +30,10 @@ namespace Dungeon.Logic.Services
         public Vector2[] WorldPoints;
         public float MaxShadowLength;
         public float Height;
+        // When true, the caster polygon itself is not rendered as a solid shadow occluder —
+        // only the shadow fins are drawn. Used for sprite-based casters where the sprite
+        // provides visual coverage and the polygon occluder would darken transparent areas.
+        public bool SkipOccluder;
     }
 
     // Data passed to the renderer for point lights.
@@ -128,6 +132,7 @@ namespace Dungeon.Logic.Services
             {
                 WorldObject obj = kvp.Value;
                 if (!obj.TryGetFeature<ShadowCaster>(out ShadowCaster caster)) { continue; }
+                if (!caster.Enabled) { continue; }
 
                 Vector2[] worldPoints = caster.GetWorldPoints(obj.WorldPosition);
                 if (worldPoints == null || worldPoints.Length < 3) { continue; }
@@ -137,6 +142,7 @@ namespace Dungeon.Logic.Services
                     WorldPoints = worldPoints,
                     MaxShadowLength = caster.MaxShadowLength,
                     Height = caster.Height,
+                    SkipOccluder = caster.SkipOccluder,
                 });
             }
         }
@@ -195,6 +201,7 @@ namespace Dungeon.Logic.Services
                 {
                     WorldObject obj = kvp.Value;
                     if (!obj.TryGetFeature<ShadowCaster>(out ShadowCaster caster)) { continue; }
+                    if (!caster.Enabled) { continue; }
 
                     Vector2[] worldPoints = caster.GetWorldPoints(obj.WorldPosition);
                     if (worldPoints == null || worldPoints.Length < 3) { continue; }
@@ -227,6 +234,7 @@ namespace Dungeon.Logic.Services
                 {
                     WorldObject obj2 = kvp2.Value;
                     if (!obj2.TryGetFeature<ShadowCaster>(out ShadowCaster caster)) { continue; }
+                    if (!caster.Enabled) { continue; }
 
                     Vector2[] worldPoints = caster.GetWorldPoints(obj2.WorldPosition);
                     if (worldPoints == null || worldPoints.Length < 3) { continue; }
