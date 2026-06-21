@@ -84,6 +84,12 @@ namespace Dungeon.Visuals
         [Tooltip("Render priority for empty terrain (higher = drawn on top).")]
         [SerializeField] private int _emptyPriority = 0;
 
+        [Header("Wall Atlas")]
+        [Tooltip("Texture atlas for wall tiles (obstacle autotiling).")]
+        [SerializeField] private Texture2D _wallTexture;
+        [SerializeField] [Min(1)] private int _wallColumns = 16;
+        [SerializeField] [Min(1)] private int _wallRows    = 4;
+
         [Header("Not Revealed (visual-only fog-of-war override)")]
         [Tooltip("First tile index in the atlas for unrevealed rendering. " +
                  "16 bitmask variants (0–15) laid out consecutively.")]
@@ -102,6 +108,10 @@ namespace Dungeon.Visuals
         public int       Rows             => _rows;
         public int       NotInitializedId => _notInitializedId;
         public int       EmptyId          => _emptyId;
+
+        public Texture2D WallTexture      => _wallTexture;
+        public int       WallColumns      => _wallColumns;
+        public int       WallRows         => _wallRows;
 
         // ── Terrain entry ────────────────────────────────────────────────────
 
@@ -125,6 +135,12 @@ namespace Dungeon.Visuals
                      "The 16 bitmask variants (0–15) must be laid out consecutively " +
                      "starting at this index.  Bitmask bits: NW=1, NE=2, SW=4, SE=8.")]
             public int FirstTileIndex;
+
+            [Tooltip("Index of the first tile in the wall atlas for this terrain type. " +
+                     "The 16 cardinal-neighbor bitmask variants (0–15) are laid out " +
+                     "consecutively.  Bitmask bits: N=1, E=2, S=4, W=8.  " +
+                     "Set to -1 if this type has no wall tiles.")]
+            public int WallFirstTileIndex;
 
             [Header("Generation — Surface")]
 
@@ -233,6 +249,26 @@ namespace Dungeon.Visuals
                 return true;
             }
             terrainTileIndex = 0;
+            return false;
+        }
+
+        // ── Wall bitmask → tile index (cardinal neighbors, no rotation) ─────
+
+        /// <summary>
+        /// Given a terrain/obstacle type Id and its 4-bit cardinal bitmask,
+        /// returns the wall atlas tile index.
+        /// Bitmask bits: N=1, E=2, S=4, W=8.
+        /// Returns false if the type has no wall tiles or is not registered.
+        /// </summary>
+        public bool GetWallTileInfo(int tileId, int bitmask, out int wallTileIndex)
+        {
+            EnsureLookup();
+            if (_lookup.TryGetValue(tileId, out TerrainEntry entry) && entry.WallFirstTileIndex >= 0)
+            {
+                wallTileIndex = entry.WallFirstTileIndex + (bitmask & 0xF);
+                return true;
+            }
+            wallTileIndex = 0;
             return false;
         }
 

@@ -7,6 +7,7 @@ namespace Dungeon.Visuals.Authoring
     {
         [SerializeField] private TerrainAtlas _terrainAtlas;
         [SerializeField] private Material _material;
+        [SerializeField] private Material _wallMaterial;
         [SerializeField] private int _chunkUnloadRadius = 4;
         [SerializeField] private WorldObjectDatabase _worldObjectDatabase;
 
@@ -14,6 +15,7 @@ namespace Dungeon.Visuals.Authoring
         public Transform ChunkParent => transform;
 
         public TerrainAtlas TerrainAtlas => _terrainAtlas;
+        public Material WallMaterial => _wallMaterial;
         public WorldObjectDatabase WorldObjectDatabase => _worldObjectDatabase;
 
         public WorldRenderConfig GetConfig() => new WorldRenderConfig

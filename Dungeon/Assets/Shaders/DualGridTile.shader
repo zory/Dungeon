@@ -63,6 +63,8 @@ Shader "Dungeon/DualGridTile"
             // Global light map texture set by the LightMap renderer feature.
             // When not set, Unity provides a white default → fully lit fallback.
             TEXTURE2D(_LightMap);
+            // Shadow height map: R = normalized max caster height at this pixel.
+            TEXTURE2D(_ShadowHeightMap);
             float4 _LightMapParams; // xy = screen width/height
 
             CBUFFER_START(UnityPerMaterial)
@@ -194,9 +196,14 @@ Shader "Dungeon/DualGridTile"
                     result.a   = saturate(result.a + tile.a * (1.0h - result.a));
                 }
 
-                // Binary lighting: sample the global light map using screen UV.
+                // Binary lighting: sample the global light map and shadow height map.
                 float2 screenUV = i.positionCS.xy / _LightMapParams.xy;
-                half lit = step(0.5h, SAMPLE_TEXTURE2D(_LightMap, sampler_point_clamp, screenUV).r);
+                half baseLight = step(0.5h, SAMPLE_TEXTURE2D(_LightMap, sampler_point_clamp, screenUV).r);
+                half shadowHeight = SAMPLE_TEXTURE2D(_ShadowHeightMap, sampler_point_clamp, screenUV).r;
+
+                // Terrain is at height 0 — any shadow (height > 0) makes it unlit.
+                half inShadow = step(0.001h, shadowHeight);
+                half lit = baseLight * (1.0h - inShadow);
 
                 // Lit: normal tinted appearance.
                 // Unlit: only outlines (dark pixels) shown as white; everything else pitch black.

@@ -14,6 +14,10 @@ namespace Dungeon.Visuals.Lighting
         [Tooltip("Offset from the transform position on the XZ plane.")]
         public Vector2 Offset = Vector2.zero;
 
+        [Tooltip("Height of this light source. Taller lights are not blocked by shorter shadow casters.")]
+        [Min(0.01f)]
+        public float Height = 1f;
+
         [Tooltip("Whether this light source is currently active.")]
         [SerializeField] private bool _enabled = true;
 

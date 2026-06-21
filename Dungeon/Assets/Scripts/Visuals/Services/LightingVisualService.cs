@@ -16,6 +16,7 @@ namespace Dungeon.Visuals.Services
         // Tracked MonoBehaviour → WorldObject mappings.
         private readonly List<TrackedLight> _trackedLights = new();
         private readonly List<TrackedCaster> _trackedCasters = new();
+        private readonly List<TrackedSpriteCaster> _trackedSpriteCasters = new();
 
         private struct TrackedLight
         {
@@ -26,6 +27,12 @@ namespace Dungeon.Visuals.Services
         private struct TrackedCaster
         {
             public ShadowCaster2DCustom MonoBehaviour;
+            public int ObjectId;
+        }
+
+        private struct TrackedSpriteCaster
+        {
+            public SpriteShadowCaster MonoBehaviour;
             public int ObjectId;
         }
 
@@ -47,6 +54,13 @@ namespace Dungeon.Visuals.Services
             {
                 RegisterShadowCaster(caster);
             }
+
+            // Scan scene for existing SpriteShadowCaster MonoBehaviours.
+            SpriteShadowCaster[] spritesCasters = Object.FindObjectsByType<SpriteShadowCaster>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            foreach (SpriteShadowCaster caster in spritesCasters)
+            {
+                RegisterSpriteShadowCaster(caster);
+            }
         }
 
         private void RegisterLightSource(LightSource mono)
@@ -55,7 +69,7 @@ namespace Dungeon.Visuals.Services
             var obj = new Logic.WorldObject("LightSource", worldPos);
             obj.SetPosition(worldPos, _grid.CellSize, _grid.XZOffset, _grid.Elevation);
 
-            var feature = new Logic.LightSource(mono.Radius, mono.Offset, mono.Enabled);
+            var feature = new Logic.LightSource(mono.Radius, mono.Offset, mono.Enabled, mono.Height);
             obj.AddFeature(feature);
 
             _objects.Register(obj);
@@ -77,6 +91,20 @@ namespace Dungeon.Visuals.Services
             _trackedCasters.Add(new TrackedCaster { MonoBehaviour = mono, ObjectId = obj.Id });
         }
 
+        private void RegisterSpriteShadowCaster(SpriteShadowCaster mono)
+        {
+            Vector3 worldPos = mono.transform.position;
+            var obj = new Logic.WorldObject("SpriteShadowCaster", worldPos);
+            obj.SetPosition(worldPos, _grid.CellSize, _grid.XZOffset, _grid.Elevation);
+
+            Vector2[] localPoints = mono.GetLocalPoints();
+            var feature = new Logic.ShadowCaster(localPoints, mono.Height, mono.Height);
+            obj.AddFeature(feature);
+
+            _objects.Register(obj);
+            _trackedSpriteCasters.Add(new TrackedSpriteCaster { MonoBehaviour = mono, ObjectId = obj.Id });
+        }
+
         public void Tick(float deltaTime)
         {
             // Sync MonoBehaviour state → Logic features each frame.
@@ -94,6 +122,7 @@ namespace Dungeon.Visuals.Services
                 feature.Radius = tracked.MonoBehaviour.Radius;
                 feature.Offset = tracked.MonoBehaviour.Offset;
                 feature.Enabled = tracked.MonoBehaviour.Enabled;
+                feature.Height = tracked.MonoBehaviour.Height;
             }
 
             foreach (TrackedCaster tracked in _trackedCasters)
@@ -110,6 +139,22 @@ namespace Dungeon.Visuals.Services
                 feature.LocalPoints = tracked.MonoBehaviour.GetLocalPoints();
                 feature.MaxShadowLength = tracked.MonoBehaviour.MaxShadowLength;
             }
+
+            foreach (TrackedSpriteCaster tracked in _trackedSpriteCasters)
+            {
+                if (tracked.MonoBehaviour == null) { continue; }
+                if (!_objects.TryGet(tracked.ObjectId, out Logic.WorldObject obj)) { continue; }
+                if (!obj.TryGetFeature<Logic.ShadowCaster>(out Logic.ShadowCaster feature)) { continue; }
+
+                // Update position.
+                Vector3 worldPos = tracked.MonoBehaviour.transform.position;
+                obj.SetPosition(worldPos, _grid.CellSize, _grid.XZOffset, _grid.Elevation);
+
+                // Update feature data.
+                feature.LocalPoints = tracked.MonoBehaviour.GetLocalPoints();
+                feature.MaxShadowLength = tracked.MonoBehaviour.Height;
+                feature.Height = tracked.MonoBehaviour.Height;
+            }
         }
 
         public void Dispose()
@@ -125,6 +170,12 @@ namespace Dungeon.Visuals.Services
                 _objects.Remove(tracked.ObjectId);
             }
             _trackedCasters.Clear();
+
+            foreach (TrackedSpriteCaster tracked in _trackedSpriteCasters)
+            {
+                _objects.Remove(tracked.ObjectId);
+            }
+            _trackedSpriteCasters.Clear();
         }
     }
 }

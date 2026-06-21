@@ -12,10 +12,15 @@ namespace Dungeon.Logic
         // Maximum shadow length in world units when global light is at full intensity.
         public float MaxShadowLength { get; set; }
 
-        public ShadowCaster(Vector2[] localPoints, float maxShadowLength)
+        // Height of the caster. Determines shadow length and which objects get shadowed.
+        // Only objects with height < this value will be affected by this shadow.
+        public float Height { get; set; }
+
+        public ShadowCaster(Vector2[] localPoints, float maxShadowLength, float height = 1f)
         {
             LocalPoints = localPoints;
             MaxShadowLength = maxShadowLength;
+            Height = height;
         }
 
         // Returns polygon vertices transformed to world-space XZ coordinates

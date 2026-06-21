@@ -13,6 +13,7 @@ Shader "Dungeon/LitObject"
     {
         [MainTexture] _MainTex ("Sprite Texture", 2D) = "white" {}
         [MainColor]   _Color   ("Tint Color", Color) = (1, 1, 1, 1)
+        _ObjectHeight ("Object Height", Float) = 0
     }
 
     SubShader
@@ -46,11 +47,17 @@ Shader "Dungeon/LitObject"
             // Global light map texture set by the LightMap renderer feature.
             // When not set, Unity provides a white default → fully lit fallback.
             TEXTURE2D(_LightMap);
+            // Shadow height map: R = normalized max caster height at this pixel.
+            TEXTURE2D(_ShadowHeightMap);
             float4 _LightMapParams; // xy = screen width/height
+
+            // Maximum height used for normalization (must match LightMapRendererFeature.MAX_SHADOW_HEIGHT).
+            static const float MAX_SHADOW_HEIGHT = 10.0;
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _MainTex_ST;
                 half4  _Color;
+                float  _ObjectHeight; // Height of this object for shadow receiving.
             CBUFFER_END
 
             // ── Vertex structures ────────────────────────────────────────────
@@ -90,11 +97,16 @@ Shader "Dungeon/LitObject"
                 // Combine texture with material tint and vertex colour (Unity sprites use vertex colour for tinting/alpha).
                 half4 col = tex * _Color * i.color;
 
-                // Binary lighting: sample the global light map using screen UV.
-                // SV_POSITION gives pixel coordinates in the fragment shader,
-                // so dividing by screen dimensions yields a [0,1] screen UV.
+                // Binary lighting: sample the global light map and shadow height map.
                 float2 screenUV = i.positionCS.xy / _LightMapParams.xy;
-                half lit = step(0.5h, SAMPLE_TEXTURE2D(_LightMap, sampler_point_clamp, screenUV).r);
+                half baseLight = step(0.5h, SAMPLE_TEXTURE2D(_LightMap, sampler_point_clamp, screenUV).r);
+                half shadowHeight = SAMPLE_TEXTURE2D(_ShadowHeightMap, sampler_point_clamp, screenUV).r;
+
+                // Object is in shadow if a taller caster's shadow covers it.
+                // shadowHeight is normalized (0-1), compare against this object's normalized height.
+                half normalizedHeight = _ObjectHeight / MAX_SHADOW_HEIGHT;
+                half inShadow = step(normalizedHeight + 0.001h, shadowHeight);
+                half lit = baseLight * (1.0h - inShadow);
 
                 // Lit: normal tinted sprite.
                 // Unlit: only outlines (dark pixels) shown as white; everything else pitch black.

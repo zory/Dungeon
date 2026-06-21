@@ -32,11 +32,13 @@ namespace Dungeon.Visuals.Lighting
     {
         private const string LIGHT_SHADER_NAME = "Dungeon/LightCircle";
         private const string SHADOW_SHADER_NAME = "Hidden/Dungeon/ShadowGeometry";
+        private const string SHADOW_HEIGHT_SHADER_NAME = "Hidden/Dungeon/ShadowHeight";
         private const string GLOBAL_LIGHT_SHADER_NAME = "Dungeon/GlobalLight";
 
         private LightMapPass _pass;
         private Material _lightCircleMaterial;
         private Material _shadowMaterial;
+        private Material _shadowHeightMaterial;
         private Material _globalLightMaterial;
 
         public override void Create()
@@ -53,13 +55,19 @@ namespace Dungeon.Visuals.Lighting
                 _shadowMaterial = CoreUtils.CreateEngineMaterial(shadowShader);
             }
 
+            Shader shadowHeightShader = Shader.Find(SHADOW_HEIGHT_SHADER_NAME);
+            if (shadowHeightShader != null)
+            {
+                _shadowHeightMaterial = CoreUtils.CreateEngineMaterial(shadowHeightShader);
+            }
+
             Shader globalLightShader = Shader.Find(GLOBAL_LIGHT_SHADER_NAME);
             if (globalLightShader != null)
             {
                 _globalLightMaterial = CoreUtils.CreateEngineMaterial(globalLightShader);
             }
 
-            _pass = new LightMapPass(_lightCircleMaterial, _shadowMaterial, _globalLightMaterial);
+            _pass = new LightMapPass(_lightCircleMaterial, _shadowMaterial, _shadowHeightMaterial, _globalLightMaterial);
             _pass.renderPassEvent = RenderPassEvent.BeforeRenderingOpaques;
         }
 
@@ -81,6 +89,8 @@ namespace Dungeon.Visuals.Lighting
             _lightCircleMaterial = null;
             CoreUtils.Destroy(_shadowMaterial);
             _shadowMaterial = null;
+            CoreUtils.Destroy(_shadowHeightMaterial);
+            _shadowHeightMaterial = null;
             CoreUtils.Destroy(_globalLightMaterial);
             _globalLightMaterial = null;
         }
@@ -90,21 +100,26 @@ namespace Dungeon.Visuals.Lighting
         private class LightMapPass : ScriptableRenderPass
         {
             private static readonly int LIGHT_MAP_ID = Shader.PropertyToID("_LightMap");
+            private static readonly int SHADOW_HEIGHT_MAP_ID = Shader.PropertyToID("_ShadowHeightMap");
             private static readonly int LIGHT_MAP_PARAMS_ID = Shader.PropertyToID("_LightMapParams");
             private const float POINT_SHADOW_EXTRUDE_DISTANCE = 100f;
+            // Maximum height value for normalization (objects taller than this cap at 1.0).
+            private const float MAX_SHADOW_HEIGHT = 10f;
 
             private readonly Material _lightMaterial;
             private readonly Material _shadowMaterial;
+            private readonly Material _shadowHeightMaterial;
             private readonly Material _globalLightMaterial;
             private readonly Mesh _quadMesh;
             // Shadow meshes from the previous frame — destroyed at the start of the next frame to avoid leaks.
             private readonly List<Mesh> _previousShadowMeshes = new List<Mesh>();
 
-            internal LightMapPass(Material lightMaterial, Material shadowMaterial, Material globalLightMaterial)
+            internal LightMapPass(Material lightMaterial, Material shadowMaterial, Material shadowHeightMaterial, Material globalLightMaterial)
             {
                 profilingSampler = new ProfilingSampler("LightMap Pass");
                 _lightMaterial = lightMaterial;
                 _shadowMaterial = shadowMaterial;
+                _shadowHeightMaterial = shadowHeightMaterial;
                 _globalLightMaterial = globalLightMaterial;
                 _quadMesh = CreateQuadMesh();
             }
@@ -112,8 +127,9 @@ namespace Dungeon.Visuals.Lighting
             // ── Per-light shadow data ─────────────────────────────────────
             private struct PointLightData
             {
-                internal Vector4 QuadParams; // NDC position and radius for the light circle
-                internal Mesh ShadowMesh;    // Combined shadow geometry mesh for this light (null if none)
+                internal Vector4 QuadParams;     // NDC position and radius for the light circle
+                internal Mesh ShadowMesh;        // Combined shadow geometry for light map darkening (null if none)
+                internal Mesh ShadowHeightMesh;  // Combined shadow geometry with height encoded in vertex color
             }
 
             // ── Pass data for RenderGraph ──────────────────────────────────
@@ -121,15 +137,20 @@ namespace Dungeon.Visuals.Lighting
             {
                 internal Material LightMaterial;
                 internal Material ShadowMaterial;
+                internal Material ShadowHeightMaterial;
                 internal Material GlobalLightMaterial;
                 internal Mesh QuadMesh;
                 internal TextureHandle LightMapTexture;
+                internal TextureHandle ShadowHeightMapTexture;
                 internal int ScreenWidth;
                 internal int ScreenHeight;
 
                 // Global directional light.
                 internal bool HasGlobalLight;
+
+                // Shadow geometry (shared between light map darkening and height map).
                 internal Mesh GlobalShadowMesh;
+                internal Mesh GlobalShadowHeightMesh;
 
                 // Point lights.
                 internal bool HasPointLights;
@@ -150,7 +171,7 @@ namespace Dungeon.Visuals.Lighting
                 int screenWidth = cameraData.cameraTargetDescriptor.width;
                 int screenHeight = cameraData.cameraTargetDescriptor.height;
 
-                // Create the light map render texture (single-channel, screen-sized).
+                // Create render texture descriptor (single-channel, screen-sized).
                 RenderTextureDescriptor desc = cameraData.cameraTargetDescriptor;
                 desc.depthStencilFormat = GraphicsFormat.None;
                 desc.msaaSamples = 1;
@@ -160,6 +181,8 @@ namespace Dungeon.Visuals.Lighting
 
                 TextureHandle lightMapTex = UniversalRenderer.CreateRenderGraphTexture(
                     renderGraph, desc, "_LightMapRT", true);
+                TextureHandle shadowHeightTex = UniversalRenderer.CreateRenderGraphTexture(
+                    renderGraph, desc, "_ShadowHeightMapRT", true);
 
                 Camera cam = cameraData.camera;
 
@@ -181,11 +204,13 @@ namespace Dungeon.Visuals.Lighting
                     lighting.GetShadowCasterData(shadowCasterData);
                 }
 
-                // ── Build global directional shadow mesh ─────────────────────
+                // ── Build global directional shadow meshes ───────────────────
                 Mesh globalShadowMesh = null;
-                if (hasGlobalLight)
+                Mesh globalShadowHeightMesh = null;
+                if (hasGlobalLight && shadowCasterData.Count > 0)
                 {
                     globalShadowMesh = BuildDirectionalShadowMesh(globalLightDir, globalIntensity, shadowCasterData, cam, screenWidth, screenHeight);
+                    globalShadowHeightMesh = BuildDirectionalShadowHeightMesh(globalLightDir, globalIntensity, shadowCasterData, cam, screenWidth, screenHeight);
                 }
 
                 // ── Gather point lights from Logic ───────────────────────────
@@ -222,28 +247,26 @@ namespace Dungeon.Visuals.Lighting
                     float ndcRadiusX = (screenRadius / screenWidth) * 2f;
                     float ndcRadiusY = (screenRadius / screenHeight) * 2f;
 
-                    // Build radial shadow mesh for this point light.
-                    Mesh shadowMesh = BuildRadialShadowMesh(lightXZ, lightData.Radius, shadowCasterData, cam, screenWidth, screenHeight);
+                    // Build radial shadow meshes for this point light.
+                    Mesh shadowMesh = BuildRadialShadowMesh(lightXZ, lightData.Radius, lightData.Height, shadowCasterData, cam, screenWidth, screenHeight);
+                    Mesh shadowHeightMesh = BuildRadialShadowHeightMesh(lightXZ, lightData.Radius, lightData.Height, shadowCasterData, cam, screenWidth, screenHeight);
 
                     PointLightData entry = new PointLightData
                     {
                         QuadParams = new Vector4(ndcX, ndcY, ndcRadiusX, ndcRadiusY),
-                        ShadowMesh = shadowMesh
+                        ShadowMesh = shadowMesh,
+                        ShadowHeightMesh = shadowHeightMesh
                     };
                     pointLightEntries.Add(entry);
                 }
 
                 // Track shadow meshes for cleanup next frame.
-                if (globalShadowMesh != null)
-                {
-                    _previousShadowMeshes.Add(globalShadowMesh);
-                }
+                if (globalShadowMesh != null) { _previousShadowMeshes.Add(globalShadowMesh); }
+                if (globalShadowHeightMesh != null) { _previousShadowMeshes.Add(globalShadowHeightMesh); }
                 foreach (PointLightData entry in pointLightEntries)
                 {
-                    if (entry.ShadowMesh != null)
-                    {
-                        _previousShadowMeshes.Add(entry.ShadowMesh);
-                    }
+                    if (entry.ShadowMesh != null) { _previousShadowMeshes.Add(entry.ShadowMesh); }
+                    if (entry.ShadowHeightMesh != null) { _previousShadowMeshes.Add(entry.ShadowHeightMesh); }
                 }
 
                 using (var builder = renderGraph.AddUnsafePass<PassData>(
@@ -251,30 +274,35 @@ namespace Dungeon.Visuals.Lighting
                 {
                     passData.LightMaterial = _lightMaterial;
                     passData.ShadowMaterial = _shadowMaterial;
+                    passData.ShadowHeightMaterial = _shadowHeightMaterial;
                     passData.GlobalLightMaterial = _globalLightMaterial;
                     passData.QuadMesh = _quadMesh;
                     passData.LightMapTexture = lightMapTex;
+                    passData.ShadowHeightMapTexture = shadowHeightTex;
                     passData.ScreenWidth = screenWidth;
                     passData.ScreenHeight = screenHeight;
                     passData.HasGlobalLight = hasGlobalLight;
                     passData.GlobalShadowMesh = globalShadowMesh;
+                    passData.GlobalShadowHeightMesh = globalShadowHeightMesh;
                     passData.HasPointLights = hasPointLights;
                     passData.PointLightEntries = pointLightEntries;
 
                     builder.UseTexture(lightMapTex, AccessFlags.WriteAll);
+                    builder.UseTexture(shadowHeightTex, AccessFlags.WriteAll);
                     builder.AllowPassCulling(false);
                     builder.AllowGlobalStateModification(true);
 
-                    // Set _LightMap as a global texture after this pass completes.
+                    // Set global textures after this pass completes.
                     builder.SetGlobalTextureAfterPass(lightMapTex, LIGHT_MAP_ID);
 
                     builder.SetRenderFunc(static (PassData data, UnsafeGraphContext context) =>
                     {
                         UnsafeCommandBuffer cmd = context.cmd;
+                        Rect viewport = new Rect(0, 0, data.ScreenWidth, data.ScreenHeight);
 
-                        // Set the light map as the render target.
+                        // ── Phase 1: Light map (base illumination, no shadows) ──
                         cmd.SetRenderTarget(data.LightMapTexture);
-                        cmd.SetViewport(new Rect(0, 0, data.ScreenWidth, data.ScreenHeight));
+                        cmd.SetViewport(viewport);
 
                         bool anyLight = data.HasGlobalLight || data.HasPointLights;
 
@@ -286,29 +314,19 @@ namespace Dungeon.Visuals.Lighting
                         else
                         {
                             cmd.ClearRenderTarget(false, true, Color.black);
-
-                            // Identity view/projection: we work in NDC directly.
                             cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
 
-                            // ── Global directional light ─────────────────────
+                            // Global directional light: fullscreen white quad.
                             if (data.HasGlobalLight && data.GlobalLightMaterial != null)
                             {
-                                // Draw fullscreen white quad (global illumination).
                                 Matrix4x4 fullscreenMatrix = Matrix4x4.TRS(
                                     Vector3.zero, Quaternion.identity, new Vector3(2f, 2f, 1f));
                                 cmd.DrawMesh(data.QuadMesh, fullscreenMatrix, data.GlobalLightMaterial, 0, 0);
-
-                                // Draw directional shadow geometry (BlendOp Min, darkens lit areas).
-                                if (data.GlobalShadowMesh != null && data.ShadowMaterial != null)
-                                {
-                                    cmd.DrawMesh(data.GlobalShadowMesh, Matrix4x4.identity, data.ShadowMaterial, 0, 0);
-                                }
                             }
 
-                            // ── Point lights ─────────────────────────────────
+                            // Point lights: additive circles.
                             foreach (PointLightData entry in data.PointLightEntries)
                             {
-                                // Draw light circle (additive).
                                 if (data.LightMaterial != null)
                                 {
                                     Vector4 lp = entry.QuadParams;
@@ -316,19 +334,38 @@ namespace Dungeon.Visuals.Lighting
                                         new Vector3(lp.x, lp.y, 0f),
                                         Quaternion.identity,
                                         new Vector3(lp.z * 2f, lp.w * 2f, 1f));
-
                                     cmd.DrawMesh(data.QuadMesh, lightMatrix, data.LightMaterial, 0, 0);
-                                }
-
-                                // Draw radial shadow geometry for this point light (BlendOp Min).
-                                if (entry.ShadowMesh != null && data.ShadowMaterial != null)
-                                {
-                                    cmd.DrawMesh(entry.ShadowMesh, Matrix4x4.identity, data.ShadowMaterial, 0, 0);
                                 }
                             }
                         }
 
-                        // Set _LightMapParams as a global float4 (screen dimensions).
+                        // ── Phase 2: Shadow height map ──────────────────────────
+                        cmd.SetRenderTarget(data.ShadowHeightMapTexture);
+                        cmd.SetViewport(viewport);
+                        cmd.ClearRenderTarget(false, true, Color.black);
+
+                        if (anyLight)
+                        {
+                            cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
+
+                            // Global directional shadow heights.
+                            if (data.HasGlobalLight && data.GlobalShadowHeightMesh != null && data.ShadowHeightMaterial != null)
+                            {
+                                cmd.DrawMesh(data.GlobalShadowHeightMesh, Matrix4x4.identity, data.ShadowHeightMaterial, 0, 0);
+                            }
+
+                            // Point light radial shadow heights.
+                            foreach (PointLightData entry in data.PointLightEntries)
+                            {
+                                if (entry.ShadowHeightMesh != null && data.ShadowHeightMaterial != null)
+                                {
+                                    cmd.DrawMesh(entry.ShadowHeightMesh, Matrix4x4.identity, data.ShadowHeightMaterial, 0, 0);
+                                }
+                            }
+                        }
+
+                        // Set global shader properties.
+                        cmd.SetGlobalTexture(SHADOW_HEIGHT_MAP_ID, data.ShadowHeightMapTexture);
                         cmd.SetGlobalVector(LIGHT_MAP_PARAMS_ID,
                             new Vector4(data.ScreenWidth, data.ScreenHeight, 0f, 0f));
                     });
@@ -396,9 +433,9 @@ namespace Dungeon.Visuals.Lighting
                     Vector2 a = worldPoints[i];
                     Vector2 b = worldPoints[(i + 1) % pointCount];
 
-                    // Edge direction and outward normal (assuming CCW winding).
+                    // Edge direction and outward normal (CCW winding).
                     Vector2 edge = b - a;
-                    Vector2 edgeNormal = new Vector2(-edge.y, edge.x);
+                    Vector2 edgeNormal = new Vector2(edge.y, -edge.x);
 
                     // Back-facing: edge normal agrees with shadow direction.
                     float dot = Vector2.Dot(edgeNormal, shadowDir);
@@ -433,7 +470,7 @@ namespace Dungeon.Visuals.Lighting
             // Builds a combined radial shadow mesh for all shadow casters relevant to a given point light.
             // Returns null if no shadow geometry is needed.
             private Mesh BuildRadialShadowMesh(
-                Vector2 lightPosXZ, float lightRadius,
+                Vector2 lightPosXZ, float lightRadius, float lightHeight,
                 List<ShadowCasterRenderData> shadowCasters,
                 Camera cam, int screenWidth, int screenHeight)
             {
@@ -445,6 +482,12 @@ namespace Dungeon.Visuals.Lighting
                     ShadowCasterRenderData caster = shadowCasters[c];
                     Vector2[] worldPoints = caster.WorldPoints;
                     if (worldPoints == null || worldPoints.Length < 3)
+                    {
+                        continue;
+                    }
+
+                    // Skip casters that are shorter than or equal to the light height.
+                    if (caster.Height <= lightHeight)
                     {
                         continue;
                     }
@@ -490,9 +533,9 @@ namespace Dungeon.Visuals.Lighting
                     Vector2 a = worldPoints[i];
                     Vector2 b = worldPoints[(i + 1) % pointCount];
 
-                    // Edge direction and outward normal (assuming CCW winding).
+                    // Edge direction and outward normal (CCW winding).
                     Vector2 edge = b - a;
-                    Vector2 edgeNormal = new Vector2(-edge.y, edge.x);
+                    Vector2 edgeNormal = new Vector2(edge.y, -edge.x);
 
                     // Direction from light to edge midpoint.
                     Vector2 edgeMid = (a + b) * 0.5f;
@@ -526,6 +569,105 @@ namespace Dungeon.Visuals.Lighting
                     triangles.Add(baseIndex + 2);
                     triangles.Add(baseIndex + 3);
                 }
+            }
+
+            // ── Shadow height geometry (encodes caster height in vertex color) ────
+
+            // Builds directional shadow geometry with height encoded in vertex colors.
+            // Same shape as BuildDirectionalShadowMesh but with per-caster height in vertex color R.
+            private Mesh BuildDirectionalShadowHeightMesh(
+                Vector2 globalLightDir, float intensity,
+                List<ShadowCasterRenderData> shadowCasters,
+                Camera cam, int screenWidth, int screenHeight)
+            {
+                List<Vector3> vertices = new List<Vector3>();
+                List<int> triangles = new List<int>();
+                List<Color> colors = new List<Color>();
+                Vector2 shadowDir = -globalLightDir.normalized;
+
+                for (int c = 0; c < shadowCasters.Count; c++)
+                {
+                    ShadowCasterRenderData caster = shadowCasters[c];
+                    Vector2[] worldPoints = caster.WorldPoints;
+                    if (worldPoints == null || worldPoints.Length < 3) { continue; }
+
+                    float shadowLength = caster.MaxShadowLength * intensity;
+                    if (shadowLength <= 0f) { continue; }
+
+                    float normalizedHeight = Mathf.Clamp01(caster.Height / MAX_SHADOW_HEIGHT);
+                    Color heightColor = new Color(normalizedHeight, 0f, 0f, 1f);
+
+                    int vertsBefore = vertices.Count;
+
+                    // Add caster polygon as solid occluder.
+                    AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                    // Add directional shadow fins.
+                    AddDirectionalShadowFins(worldPoints, shadowDir, shadowLength, cam, screenWidth, screenHeight, vertices, triangles);
+
+                    // Fill vertex colors for all new vertices.
+                    for (int v = vertsBefore; v < vertices.Count; v++)
+                    {
+                        colors.Add(heightColor);
+                    }
+                }
+
+                if (vertices.Count == 0) { return null; }
+
+                Mesh mesh = new Mesh { name = "DirectionalShadowHeightMesh" };
+                mesh.SetVertices(vertices);
+                mesh.SetTriangles(triangles, 0);
+                mesh.SetColors(colors);
+                return mesh;
+            }
+
+            // Builds radial shadow geometry with height encoded in vertex colors.
+            private Mesh BuildRadialShadowHeightMesh(
+                Vector2 lightPosXZ, float lightRadius, float lightHeight,
+                List<ShadowCasterRenderData> shadowCasters,
+                Camera cam, int screenWidth, int screenHeight)
+            {
+                List<Vector3> vertices = new List<Vector3>();
+                List<int> triangles = new List<int>();
+                List<Color> colors = new List<Color>();
+
+                for (int c = 0; c < shadowCasters.Count; c++)
+                {
+                    ShadowCasterRenderData caster = shadowCasters[c];
+                    Vector2[] worldPoints = caster.WorldPoints;
+                    if (worldPoints == null || worldPoints.Length < 3) { continue; }
+
+                    // Skip casters that are shorter than or equal to the light height.
+                    if (caster.Height <= lightHeight) { continue; }
+
+                    Vector2 centroid = ComputeCentroid(worldPoints);
+                    float casterExtent = EstimateCasterExtent(worldPoints, centroid);
+                    float distance = Vector2.Distance(lightPosXZ, centroid);
+                    if (distance > lightRadius + casterExtent + POINT_SHADOW_EXTRUDE_DISTANCE) { continue; }
+
+                    float normalizedHeight = Mathf.Clamp01(caster.Height / MAX_SHADOW_HEIGHT);
+                    Color heightColor = new Color(normalizedHeight, 0f, 0f, 1f);
+
+                    int vertsBefore = vertices.Count;
+
+                    // Add the caster polygon as solid occluder.
+                    AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                    // Add radial shadow fins.
+                    AddRadialShadowFins(worldPoints, lightPosXZ, cam, screenWidth, screenHeight, vertices, triangles);
+
+                    // Fill vertex colors for all new vertices.
+                    for (int v = vertsBefore; v < vertices.Count; v++)
+                    {
+                        colors.Add(heightColor);
+                    }
+                }
+
+                if (vertices.Count == 0) { return null; }
+
+                Mesh mesh = new Mesh { name = "RadialShadowHeightMesh" };
+                mesh.SetVertices(vertices);
+                mesh.SetTriangles(triangles, 0);
+                mesh.SetColors(colors);
+                return mesh;
             }
 
             // ── Shared helpers ───────────────────────────────────────────────────

@@ -77,6 +77,7 @@ namespace Dungeon.Visuals
         {
             UndergroundService underground = _logicWorld.Get<UndergroundService>();
             WorldRenderService worldRender = _visualWorld.Get<WorldRenderService>();
+            _visualWorld.TryGet(out WallRenderService wallRender);
 
             _onCellsRevealedHandler = (revealedCells) =>
             {
@@ -96,6 +97,9 @@ namespace Dungeon.Visuals
                 {
                     worldRender.RebuildChunk(chunkCoord);
                 }
+
+                // Also rebuild wall chunks when cells are revealed.
+                wallRender?.RebuildForCurrentView();
             };
             underground.OnCellsRevealed += _onCellsRevealedHandler;
         }
@@ -223,6 +227,21 @@ namespace Dungeon.Visuals
                 else
                 {
                     Debug.LogWarning("[GameBootstrapper] TerrainAtlas not found — obstacle visuals disabled.");
+                }
+            }
+
+            // 11. WallRenderService — autotiled wall mesh rendering for obstacles
+            {
+                TerrainAtlas terrainAtlas = worldRenderAuthoring != null ? worldRenderAuthoring.TerrainAtlas : null;
+                Material wallMaterial = worldRenderAuthoring != null ? worldRenderAuthoring.WallMaterial : null;
+                Transform chunkParent = worldRenderAuthoring != null ? worldRenderAuthoring.ChunkParent : null;
+                if (terrainAtlas != null && wallMaterial != null)
+                {
+                    if (chunkParent == null)
+                    {
+                        chunkParent = new GameObject("WallRender_Fallback").transform;
+                    }
+                    _visualWorld.Register(new WallRenderService(terrainAtlas, wallMaterial, chunkParent));
                 }
             }
 

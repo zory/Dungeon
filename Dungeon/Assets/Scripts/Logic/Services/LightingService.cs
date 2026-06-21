@@ -29,6 +29,7 @@ namespace Dungeon.Logic.Services
     {
         public Vector2[] WorldPoints;
         public float MaxShadowLength;
+        public float Height;
     }
 
     // Data passed to the renderer for point lights.
@@ -36,6 +37,7 @@ namespace Dungeon.Logic.Services
     {
         public Vector2 Position;
         public float Radius;
+        public float Height;
     }
 
     // Logic service: global directional light state, per-tile lighting queries,
@@ -134,6 +136,7 @@ namespace Dungeon.Logic.Services
                 {
                     WorldPoints = worldPoints,
                     MaxShadowLength = caster.MaxShadowLength,
+                    Height = caster.Height,
                 });
             }
         }
@@ -151,6 +154,7 @@ namespace Dungeon.Logic.Services
                 {
                     Position = light.GetWorldPositionXZ(obj.WorldPosition),
                     Radius = light.Radius,
+                    Height = light.Height,
                 });
             }
         }
