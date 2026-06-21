@@ -82,9 +82,8 @@ namespace Dungeon.Visuals.Services
             var obj = new Logic.WorldObject("ShadowCaster", worldPos);
             obj.SetPosition(worldPos, _grid.CellSize, _grid.XZOffset, _grid.Elevation);
 
-            // Use the MonoBehaviour's GetWorldPoints-style local points.
-            Vector2[] localPoints = mono.GetLocalPoints();
-            var feature = new Logic.ShadowCaster(localPoints, mono.MaxShadowLength);
+            Vector2[][] localPaths = mono.GetLocalPaths();
+            var feature = new Logic.ShadowCaster(localPaths, mono.MaxShadowLength);
             obj.AddFeature(feature);
 
             _objects.Register(obj);
@@ -97,8 +96,8 @@ namespace Dungeon.Visuals.Services
             var obj = new Logic.WorldObject("SpriteShadowCaster", worldPos);
             obj.SetPosition(worldPos, _grid.CellSize, _grid.XZOffset, _grid.Elevation);
 
-            Vector2[] localPoints = mono.GetLocalPoints();
-            var feature = new Logic.ShadowCaster(localPoints, mono.Height, mono.Height);
+            Vector2[][] localPaths = mono.GetLocalPaths();
+            var feature = new Logic.ShadowCaster(localPaths, mono.Height, mono.Height);
             feature.SkipOccluder = true;
             obj.AddFeature(feature);
 
@@ -137,7 +136,7 @@ namespace Dungeon.Visuals.Services
                 obj.SetPosition(worldPos, _grid.CellSize, _grid.XZOffset, _grid.Elevation);
 
                 // Update feature data.
-                feature.LocalPoints = tracked.MonoBehaviour.GetLocalPoints();
+                feature.LocalPaths = tracked.MonoBehaviour.GetLocalPaths();
                 feature.MaxShadowLength = tracked.MonoBehaviour.MaxShadowLength;
                 feature.Enabled = tracked.MonoBehaviour.CastsShadows && tracked.MonoBehaviour.gameObject.activeInHierarchy;
             }
@@ -153,7 +152,7 @@ namespace Dungeon.Visuals.Services
                 obj.SetPosition(worldPos, _grid.CellSize, _grid.XZOffset, _grid.Elevation);
 
                 // Update feature data.
-                feature.LocalPoints = tracked.MonoBehaviour.GetLocalPoints();
+                feature.LocalPaths = tracked.MonoBehaviour.GetLocalPaths();
                 feature.MaxShadowLength = tracked.MonoBehaviour.Height;
                 feature.Height = tracked.MonoBehaviour.Height;
                 feature.Enabled = tracked.MonoBehaviour.CastsShadows && tracked.MonoBehaviour.gameObject.activeInHierarchy;

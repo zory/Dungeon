@@ -166,6 +166,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Dungeon.Visuals::Dungeon.Visuals.Lighting.SpriteShadowCaster
   Height: 0.5
   CastsShadows: 1
+  BaseSize: {x: 1, y: 0.2}
+  BaseOffset: {x: 0, y: 0}
+  ShadowShape: {fileID: 4013397779332716106, guid: 86ba299b9a1935345beac294cb32a747, type: 3}
 --- !u!212 &46361412
 SpriteRenderer:
   serializedVersion: 2
@@ -394,6 +397,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Dungeon.Visuals::Dungeon.Visuals.Lighting.SpriteShadowCaster
   Height: 1
   CastsShadows: 1
+  BaseSize: {x: 1, y: 0.2}
+  BaseOffset: {x: 0, y: 0}
+  ShadowShape: {fileID: 0}
 --- !u!1 &139085296
 GameObject:
   m_ObjectHideFlags: 0
@@ -486,6 +492,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Dungeon.Visuals::Dungeon.Visuals.Lighting.LightSource
   Radius: 5
   Offset: {x: 0, y: 0}
+  Height: 1
   _enabled: 1
 --- !u!1 &220343933
 GameObject:
@@ -503,7 +510,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &220343934
 Transform:
   m_ObjectHideFlags: 0
@@ -533,6 +540,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Dungeon.Visuals::Dungeon.Visuals.Lighting.LightSource
   Radius: 5
   Offset: {x: 0, y: 0}
+  Height: 1
   _enabled: 1
 --- !u!1 &255297251
 GameObject:
@@ -858,6 +866,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Dungeon.Visuals::Dungeon.Visuals.Authoring.WorldRenderAuthoring
   _terrainAtlas: {fileID: 11400000, guid: 0373018fe1ab95c469d5251075068035, type: 2}
   _material: {fileID: 2100000, guid: 3265ccd01ad105c41899ef6a434c5db8, type: 2}
+  _wallMaterial: {fileID: 0}
   _chunkUnloadRadius: 4
   _worldObjectDatabase: {fileID: 0}
 --- !u!1 &750169611
@@ -1810,6 +1819,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Dungeon.Visuals::Dungeon.Visuals.Lighting.SpriteShadowCaster
   Height: 1
   CastsShadows: 1
+  BaseSize: {x: 1, y: 0.2}
+  BaseOffset: {x: 0, y: 0}
+  ShadowShape: {fileID: 0}
 --- !u!212 &1724679163
 SpriteRenderer:
   serializedVersion: 2
@@ -1860,7 +1872,7 @@ SpriteRenderer:
   m_SortingOrder: 5
   m_MaskInteraction: 0
   m_Sprite: {fileID: 4013397779332716106, guid: 86ba299b9a1935345beac294cb32a747, type: 3}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 1, g: 0.15566039, b: 0.15566039, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0

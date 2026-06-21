@@ -3,11 +3,15 @@ using UnityEngine;
 namespace Dungeon.Logic
 {
     // Feature: marks a WorldObject as a shadow caster for the 2D lighting system.
-    // Defines a polygon on the XZ plane that blocks light.
+    // Defines one or more polygon paths on the XZ plane that block light.
+    // Multiple paths support complex shapes with holes (outer boundary CCW, holes CW).
     public class ShadowCaster
     {
-        // Polygon vertices in local space (XZ plane, relative to the object's position).
-        public Vector2[] LocalPoints { get; set; }
+        // Polygon paths in local space (XZ plane, relative to the object's position).
+        // Each element is a closed polygon. For simple shapes this is a single path.
+        // For shapes with holes, the first path is the outer boundary (CCW) and
+        // subsequent paths are holes (CW).
+        public Vector2[][] LocalPaths { get; set; }
 
         // Maximum shadow length in world units when global light is at full intensity.
         public float MaxShadowLength { get; set; }
@@ -25,33 +29,63 @@ namespace Dungeon.Logic
         // itself provides visual coverage and a solid polygon would darken transparent areas.
         public bool SkipOccluder { get; set; }
 
-        public ShadowCaster(Vector2[] localPoints, float maxShadowLength, float height = 1f, bool enabled = true)
+        // Constructor for multiple polygon paths.
+        public ShadowCaster(Vector2[][] localPaths, float maxShadowLength, float height = 1f, bool enabled = true)
         {
-            LocalPoints = localPoints;
+            LocalPaths = localPaths;
             MaxShadowLength = maxShadowLength;
             Height = height;
             Enabled = enabled;
         }
 
-        // Returns polygon vertices transformed to world-space XZ coordinates
-        // using the owning object's world position.
-        public Vector2[] GetWorldPoints(Vector3 objectWorldPosition)
+        // Convenience constructor for a single polygon path.
+        public ShadowCaster(Vector2[] localPoints, float maxShadowLength, float height = 1f, bool enabled = true)
+            : this(localPoints != null ? new Vector2[][] { localPoints } : null, maxShadowLength, height, enabled)
         {
-            if (LocalPoints == null || LocalPoints.Length < 3)
+        }
+
+        // Returns all polygon paths transformed to world-space XZ coordinates.
+        public Vector2[][] GetWorldPaths(Vector3 objectWorldPosition)
+        {
+            if (LocalPaths == null || LocalPaths.Length == 0)
             {
                 return null;
             }
 
-            Vector2[] worldPoints = new Vector2[LocalPoints.Length];
             float ox = objectWorldPosition.x;
             float oz = objectWorldPosition.z;
 
-            for (int i = 0; i < LocalPoints.Length; i++)
+            Vector2[][] worldPaths = new Vector2[LocalPaths.Length][];
+            for (int p = 0; p < LocalPaths.Length; p++)
             {
-                worldPoints[i] = new Vector2(ox + LocalPoints[i].x, oz + LocalPoints[i].y);
+                Vector2[] localPath = LocalPaths[p];
+                if (localPath == null || localPath.Length < 3)
+                {
+                    worldPaths[p] = null;
+                    continue;
+                }
+
+                Vector2[] worldPath = new Vector2[localPath.Length];
+                for (int i = 0; i < localPath.Length; i++)
+                {
+                    worldPath[i] = new Vector2(ox + localPath[i].x, oz + localPath[i].y);
+                }
+                worldPaths[p] = worldPath;
             }
 
-            return worldPoints;
+            return worldPaths;
+        }
+
+        // Returns the first valid path's world points (backward compatibility).
+        public Vector2[] GetWorldPoints(Vector3 objectWorldPosition)
+        {
+            Vector2[][] paths = GetWorldPaths(objectWorldPosition);
+            if (paths == null) { return null; }
+            foreach (Vector2[] path in paths)
+            {
+                if (path != null && path.Length >= 3) { return path; }
+            }
+            return null;
         }
     }
 }

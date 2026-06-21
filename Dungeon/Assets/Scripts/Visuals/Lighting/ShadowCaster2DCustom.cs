@@ -40,6 +40,14 @@ namespace Dungeon.Visuals.Lighting
             return worldPoints;
         }
 
+        // Returns all polygon paths (single path for this caster type).
+        public Vector2[][] GetLocalPaths()
+        {
+            Vector2[] points = GetLocalPoints();
+            if (points == null || points.Length < 3) { return null; }
+            return new Vector2[][] { points };
+        }
+
         // Returns the local points, falling back to BoxCollider auto-generation if Points is empty.
         public Vector2[] GetLocalPoints()
         {

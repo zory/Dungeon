@@ -27,7 +27,9 @@ namespace Dungeon.Logic.Services
     // Data passed to the renderer for shadow casters.
     public struct ShadowCasterRenderData
     {
-        public Vector2[] WorldPoints;
+        // One or more polygon paths. For simple shapes this is a single path.
+        // For shapes with holes, additional paths represent cutouts.
+        public Vector2[][] WorldPaths;
         public float MaxShadowLength;
         public float Height;
         // When true, the caster polygon itself is not rendered as a solid shadow occluder —
@@ -134,12 +136,12 @@ namespace Dungeon.Logic.Services
                 if (!obj.TryGetFeature<ShadowCaster>(out ShadowCaster caster)) { continue; }
                 if (!caster.Enabled) { continue; }
 
-                Vector2[] worldPoints = caster.GetWorldPoints(obj.WorldPosition);
-                if (worldPoints == null || worldPoints.Length < 3) { continue; }
+                Vector2[][] worldPaths = caster.GetWorldPaths(obj.WorldPosition);
+                if (worldPaths == null || worldPaths.Length == 0) { continue; }
 
                 output.Add(new ShadowCasterRenderData
                 {
-                    WorldPoints = worldPoints,
+                    WorldPaths = worldPaths,
                     MaxShadowLength = caster.MaxShadowLength,
                     Height = caster.Height,
                     SkipOccluder = caster.SkipOccluder,
@@ -203,11 +205,11 @@ namespace Dungeon.Logic.Services
                     if (!obj.TryGetFeature<ShadowCaster>(out ShadowCaster caster)) { continue; }
                     if (!caster.Enabled) { continue; }
 
-                    Vector2[] worldPoints = caster.GetWorldPoints(obj.WorldPosition);
-                    if (worldPoints == null || worldPoints.Length < 3) { continue; }
+                    Vector2[][] worldPaths = caster.GetWorldPaths(obj.WorldPosition);
+                    if (worldPaths == null) { continue; }
 
                     float maxDist = caster.MaxShadowLength * _globalIntensity;
-                    if (IsPointInDirectionalShadow(px, pz, lightDir, worldPoints, maxDist))
+                    if (IsPointInDirectionalShadow(px, pz, lightDir, worldPaths, maxDist))
                     {
                         inGlobalShadow = true;
                         break;
@@ -236,10 +238,10 @@ namespace Dungeon.Logic.Services
                     if (!obj2.TryGetFeature<ShadowCaster>(out ShadowCaster caster)) { continue; }
                     if (!caster.Enabled) { continue; }
 
-                    Vector2[] worldPoints = caster.GetWorldPoints(obj2.WorldPosition);
-                    if (worldPoints == null || worldPoints.Length < 3) { continue; }
+                    Vector2[][] worldPaths = caster.GetWorldPaths(obj2.WorldPosition);
+                    if (worldPaths == null) { continue; }
 
-                    if (IsPointBlockedFromLight(px, pz, lightPos, worldPoints))
+                    if (IsPointBlockedFromLight(px, pz, lightPos, worldPaths))
                     {
                         blocked = true;
                         break;
@@ -253,59 +255,72 @@ namespace Dungeon.Logic.Services
 
         // ── 2D shadow geometry tests ─────────────────────────────────────────
 
-        // Tests if a point is in the directional shadow of a polygon.
-        // Casts a ray from the point toward the light. If it hits the polygon
-        // within maxDistance, the point is in shadow.
+        // Tests if a point is in the directional shadow of a set of polygon paths.
+        // Uses even-odd rule: counts ray-edge intersections across all paths.
+        // Odd count = in shadow (handles holes correctly).
         private static bool IsPointInDirectionalShadow(
-            float px, float pz, Vector2 lightDir, Vector2[] polygon, float maxDistance)
+            float px, float pz, Vector2 lightDir, Vector2[][] paths, float maxDistance)
         {
-            // Ray: origin = (px, pz), direction = lightDir (toward the light).
             float rdx = lightDir.x;
             float rdz = lightDir.y;
+            int hitCount = 0;
 
-            int count = polygon.Length;
-            for (int i = 0; i < count; i++)
+            for (int p = 0; p < paths.Length; p++)
             {
-                Vector2 a = polygon[i];
-                Vector2 b = polygon[(i + 1) % count];
+                Vector2[] polygon = paths[p];
+                if (polygon == null || polygon.Length < 3) { continue; }
 
-                float t = RaySegmentIntersection(px, pz, rdx, rdz, a.x, a.y, b.x, b.y);
-                if (t >= 0f && t <= maxDistance)
+                int count = polygon.Length;
+                for (int i = 0; i < count; i++)
                 {
-                    return true;
+                    Vector2 a = polygon[i];
+                    Vector2 b = polygon[(i + 1) % count];
+
+                    float t = RaySegmentIntersection(px, pz, rdx, rdz, a.x, a.y, b.x, b.y);
+                    if (t >= 0f && t <= maxDistance)
+                    {
+                        hitCount++;
+                    }
                 }
             }
 
-            return false;
+            return (hitCount & 1) != 0;
         }
 
-        // Tests if a caster polygon blocks the line of sight from a point to a light position.
+        // Tests if polygon paths block the line of sight from a point to a light position.
+        // Uses even-odd rule for correct hole handling.
         private static bool IsPointBlockedFromLight(
-            float px, float pz, Vector2 lightPos, Vector2[] polygon)
+            float px, float pz, Vector2 lightPos, Vector2[][] paths)
         {
             float rdx = lightPos.x - px;
             float rdz = lightPos.y - pz;
             float lightDist = Mathf.Sqrt(rdx * rdx + rdz * rdz);
             if (lightDist < 0.001f) { return false; }
 
-            // Normalize direction.
             rdx /= lightDist;
             rdz /= lightDist;
+            int hitCount = 0;
 
-            int count = polygon.Length;
-            for (int i = 0; i < count; i++)
+            for (int p = 0; p < paths.Length; p++)
             {
-                Vector2 a = polygon[i];
-                Vector2 b = polygon[(i + 1) % count];
+                Vector2[] polygon = paths[p];
+                if (polygon == null || polygon.Length < 3) { continue; }
 
-                float t = RaySegmentIntersection(px, pz, rdx, rdz, a.x, a.y, b.x, b.y);
-                if (t >= 0f && t < lightDist)
+                int count = polygon.Length;
+                for (int i = 0; i < count; i++)
                 {
-                    return true;
+                    Vector2 a = polygon[i];
+                    Vector2 b = polygon[(i + 1) % count];
+
+                    float t = RaySegmentIntersection(px, pz, rdx, rdz, a.x, a.y, b.x, b.y);
+                    if (t >= 0f && t < lightDist)
+                    {
+                        hitCount++;
+                    }
                 }
             }
 
-            return false;
+            return (hitCount & 1) != 0;
         }
 
         // 2D ray-segment intersection. Returns the distance t along the ray

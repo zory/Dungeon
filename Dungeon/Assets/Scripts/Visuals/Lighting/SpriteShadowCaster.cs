@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Dungeon.Visuals.Lighting
@@ -6,8 +7,11 @@ namespace Dungeon.Visuals.Lighting
     // Height determines shadow length and which shorter objects receive the shadow.
     // Also sets _ObjectHeight on the SpriteRenderer's material for shadow receiving.
     //
-    // The shadow caster polygon is a configurable rectangle at the base of the object,
-    // NOT the full sprite bounds. This prevents transparent sprite areas from casting shadow.
+    // Shadow shape can be defined two ways:
+    //   1. ShadowShape sprite assigned: the shadow polygon is derived from the sprite's
+    //      non-transparent pixels (via physics shapes). Supports complex outlines and holes.
+    //      The shape is scaled to fit within BaseSize and offset by BaseOffset.
+    //   2. No ShadowShape: falls back to a simple rectangle defined by BaseSize/BaseOffset.
     //
     // BaseSize: width (X) and depth (Z) of the shadow caster footprint in local units.
     // BaseOffset: offset from the transform origin to the center of the footprint.
@@ -29,6 +33,11 @@ namespace Dungeon.Visuals.Lighting
 
         [Tooltip("Offset from the transform origin to the center of the footprint (local XZ).")]
         public Vector2 BaseOffset = Vector2.zero;
+
+        [Tooltip("Optional sprite defining the shadow shape. Non-transparent pixels cast shadow. " +
+                 "If null, falls back to the rectangular BaseSize/BaseOffset shape. " +
+                 "The sprite must have 'Generate Physics Shape' enabled in its import settings.")]
+        public Sprite ShadowShape;
 
         private SpriteRenderer _spriteRenderer;
         private MaterialPropertyBlock _propertyBlock;
@@ -68,6 +77,65 @@ namespace Dungeon.Visuals.Lighting
                 new Vector2(cx + halfX, cz + halfZ),
                 new Vector2(cx - halfX, cz + halfZ)
             };
+        }
+
+        // Returns all shadow polygon paths in local XZ space.
+        // When ShadowShape is set, extracts paths from the sprite's physics shapes
+        // (supports complex outlines and holes). Otherwise returns the rectangle fallback.
+        public Vector2[][] GetLocalPaths()
+        {
+            if (ShadowShape != null)
+            {
+                Vector2[][] spritePaths = ExtractPathsFromSprite();
+                if (spritePaths != null)
+                {
+                    return spritePaths;
+                }
+            }
+
+            return new Vector2[][] { GetLocalPoints() };
+        }
+
+        private Vector2[][] ExtractPathsFromSprite()
+        {
+            int shapeCount = ShadowShape.GetPhysicsShapeCount();
+            if (shapeCount == 0) { return null; }
+
+            Bounds spriteBounds = ShadowShape.bounds;
+            float spriteWidth = spriteBounds.size.x;
+            float spriteHeight = spriteBounds.size.y;
+
+            if (spriteWidth < 0.001f || spriteHeight < 0.001f) { return null; }
+
+            Vector2[][] paths = new Vector2[shapeCount][];
+            List<Vector2> tempPoints = new List<Vector2>();
+
+            for (int s = 0; s < shapeCount; s++)
+            {
+                tempPoints.Clear();
+                ShadowShape.GetPhysicsShape(s, tempPoints);
+
+                if (tempPoints.Count < 3)
+                {
+                    paths[s] = null;
+                    continue;
+                }
+
+                Vector2[] path = new Vector2[tempPoints.Count];
+                for (int i = 0; i < tempPoints.Count; i++)
+                {
+                    // Sprite physics shape coords are in sprite-local space (pivot-relative, in world units).
+                    // Normalize to [-0.5, 0.5] based on sprite bounds, then scale by BaseSize.
+                    float nx = (tempPoints[i].x - spriteBounds.center.x) / spriteWidth;
+                    float ny = (tempPoints[i].y - spriteBounds.center.y) / spriteHeight;
+                    path[i] = new Vector2(
+                        nx * BaseSize.x + BaseOffset.x,
+                        ny * BaseSize.y + BaseOffset.y);
+                }
+                paths[s] = path;
+            }
+
+            return paths;
         }
 
         // Returns the polygon transformed to world-space XZ coordinates.

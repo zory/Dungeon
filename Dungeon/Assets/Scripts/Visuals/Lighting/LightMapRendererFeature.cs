@@ -389,27 +389,27 @@ namespace Dungeon.Visuals.Lighting
                 for (int c = 0; c < shadowCasters.Count; c++)
                 {
                     ShadowCasterRenderData caster = shadowCasters[c];
-                    Vector2[] worldPoints = caster.WorldPoints;
-                    if (worldPoints == null || worldPoints.Length < 3)
-                    {
-                        continue;
-                    }
+                    Vector2[][] worldPaths = caster.WorldPaths;
+                    if (worldPaths == null) { continue; }
 
                     float shadowLength = caster.MaxShadowLength * intensity;
-                    if (shadowLength <= 0f)
-                    {
-                        continue;
-                    }
+                    if (shadowLength <= 0f) { continue; }
 
-                    // Add caster polygon as solid occluder (skipped for sprite-based casters
-                    // where the sprite itself provides visual coverage).
-                    if (!caster.SkipOccluder)
+                    for (int p = 0; p < worldPaths.Length; p++)
                     {
-                        AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
-                    }
+                        Vector2[] worldPoints = worldPaths[p];
+                        if (worldPoints == null || worldPoints.Length < 3) { continue; }
 
-                    // Add directional shadow fins.
-                    AddDirectionalShadowFins(worldPoints, shadowDir, shadowLength, cam, screenWidth, screenHeight, vertices, triangles);
+                        // Add caster polygon as solid occluder (skipped for sprite-based casters
+                        // where the sprite itself provides visual coverage).
+                        if (!caster.SkipOccluder)
+                        {
+                            AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                        }
+
+                        // Add directional shadow fins.
+                        AddDirectionalShadowFins(worldPoints, shadowDir, shadowLength, cam, screenWidth, screenHeight, vertices, triangles);
+                    }
                 }
 
                 if (vertices.Count == 0)
@@ -484,35 +484,32 @@ namespace Dungeon.Visuals.Lighting
                 for (int c = 0; c < shadowCasters.Count; c++)
                 {
                     ShadowCasterRenderData caster = shadowCasters[c];
-                    Vector2[] worldPoints = caster.WorldPoints;
-                    if (worldPoints == null || worldPoints.Length < 3)
-                    {
-                        continue;
-                    }
+                    Vector2[][] worldPaths = caster.WorldPaths;
+                    if (worldPaths == null) { continue; }
 
                     // Skip casters that are shorter than or equal to the light height.
-                    if (caster.Height <= lightHeight)
-                    {
-                        continue;
-                    }
+                    if (caster.Height <= lightHeight) { continue; }
 
-                    // Distance check: use centroid of world points.
-                    Vector2 centroid = ComputeCentroid(worldPoints);
-                    float casterExtent = EstimateCasterExtent(worldPoints, centroid);
-                    float distance = Vector2.Distance(lightPosXZ, centroid);
-                    if (distance > lightRadius + casterExtent + POINT_SHADOW_EXTRUDE_DISTANCE)
+                    for (int p = 0; p < worldPaths.Length; p++)
                     {
-                        continue;
-                    }
+                        Vector2[] worldPoints = worldPaths[p];
+                        if (worldPoints == null || worldPoints.Length < 3) { continue; }
 
-                    // Add the caster polygon itself as a solid occluder (skipped for sprite-based casters).
-                    if (!caster.SkipOccluder)
-                    {
-                        AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
-                    }
+                        // Distance check: use centroid of world points.
+                        Vector2 centroid = ComputeCentroid(worldPoints);
+                        float casterExtent = EstimateCasterExtent(worldPoints, centroid);
+                        float distance = Vector2.Distance(lightPosXZ, centroid);
+                        if (distance > lightRadius + casterExtent + POINT_SHADOW_EXTRUDE_DISTANCE) { continue; }
 
-                    // Find back-facing edges and extrude radial shadow fins.
-                    AddRadialShadowFins(worldPoints, lightPosXZ, cam, screenWidth, screenHeight, vertices, triangles);
+                        // Add the caster polygon itself as a solid occluder (skipped for sprite-based casters).
+                        if (!caster.SkipOccluder)
+                        {
+                            AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                        }
+
+                        // Find back-facing edges and extrude radial shadow fins.
+                        AddRadialShadowFins(worldPoints, lightPosXZ, cam, screenWidth, screenHeight, vertices, triangles);
+                    }
                 }
 
                 if (vertices.Count == 0)
@@ -595,8 +592,8 @@ namespace Dungeon.Visuals.Lighting
                 for (int c = 0; c < shadowCasters.Count; c++)
                 {
                     ShadowCasterRenderData caster = shadowCasters[c];
-                    Vector2[] worldPoints = caster.WorldPoints;
-                    if (worldPoints == null || worldPoints.Length < 3) { continue; }
+                    Vector2[][] worldPaths = caster.WorldPaths;
+                    if (worldPaths == null) { continue; }
 
                     float shadowLength = caster.MaxShadowLength * intensity;
                     if (shadowLength <= 0f) { continue; }
@@ -604,20 +601,26 @@ namespace Dungeon.Visuals.Lighting
                     float normalizedHeight = Mathf.Clamp01(caster.Height / MAX_SHADOW_HEIGHT);
                     Color heightColor = new Color(normalizedHeight, 0f, 0f, 1f);
 
-                    int vertsBefore = vertices.Count;
-
-                    // Add caster polygon as solid occluder (skipped for sprite-based casters).
-                    if (!caster.SkipOccluder)
+                    for (int p = 0; p < worldPaths.Length; p++)
                     {
-                        AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
-                    }
-                    // Add directional shadow fins.
-                    AddDirectionalShadowFins(worldPoints, shadowDir, shadowLength, cam, screenWidth, screenHeight, vertices, triangles);
+                        Vector2[] worldPoints = worldPaths[p];
+                        if (worldPoints == null || worldPoints.Length < 3) { continue; }
 
-                    // Fill vertex colors for all new vertices.
-                    for (int v = vertsBefore; v < vertices.Count; v++)
-                    {
-                        colors.Add(heightColor);
+                        int vertsBefore = vertices.Count;
+
+                        // Add caster polygon as solid occluder (skipped for sprite-based casters).
+                        if (!caster.SkipOccluder)
+                        {
+                            AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                        }
+                        // Add directional shadow fins.
+                        AddDirectionalShadowFins(worldPoints, shadowDir, shadowLength, cam, screenWidth, screenHeight, vertices, triangles);
+
+                        // Fill vertex colors for all new vertices.
+                        for (int v = vertsBefore; v < vertices.Count; v++)
+                        {
+                            colors.Add(heightColor);
+                        }
                     }
                 }
 
@@ -643,34 +646,40 @@ namespace Dungeon.Visuals.Lighting
                 for (int c = 0; c < shadowCasters.Count; c++)
                 {
                     ShadowCasterRenderData caster = shadowCasters[c];
-                    Vector2[] worldPoints = caster.WorldPoints;
-                    if (worldPoints == null || worldPoints.Length < 3) { continue; }
+                    Vector2[][] worldPaths = caster.WorldPaths;
+                    if (worldPaths == null) { continue; }
 
                     // Skip casters that are shorter than or equal to the light height.
                     if (caster.Height <= lightHeight) { continue; }
 
-                    Vector2 centroid = ComputeCentroid(worldPoints);
-                    float casterExtent = EstimateCasterExtent(worldPoints, centroid);
-                    float distance = Vector2.Distance(lightPosXZ, centroid);
-                    if (distance > lightRadius + casterExtent + POINT_SHADOW_EXTRUDE_DISTANCE) { continue; }
-
                     float normalizedHeight = Mathf.Clamp01(caster.Height / MAX_SHADOW_HEIGHT);
                     Color heightColor = new Color(normalizedHeight, 0f, 0f, 1f);
 
-                    int vertsBefore = vertices.Count;
-
-                    // Add the caster polygon as solid occluder (skipped for sprite-based casters).
-                    if (!caster.SkipOccluder)
+                    for (int p = 0; p < worldPaths.Length; p++)
                     {
-                        AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
-                    }
-                    // Add radial shadow fins.
-                    AddRadialShadowFins(worldPoints, lightPosXZ, cam, screenWidth, screenHeight, vertices, triangles);
+                        Vector2[] worldPoints = worldPaths[p];
+                        if (worldPoints == null || worldPoints.Length < 3) { continue; }
 
-                    // Fill vertex colors for all new vertices.
-                    for (int v = vertsBefore; v < vertices.Count; v++)
-                    {
-                        colors.Add(heightColor);
+                        Vector2 centroid = ComputeCentroid(worldPoints);
+                        float casterExtent = EstimateCasterExtent(worldPoints, centroid);
+                        float distance = Vector2.Distance(lightPosXZ, centroid);
+                        if (distance > lightRadius + casterExtent + POINT_SHADOW_EXTRUDE_DISTANCE) { continue; }
+
+                        int vertsBefore = vertices.Count;
+
+                        // Add the caster polygon as solid occluder (skipped for sprite-based casters).
+                        if (!caster.SkipOccluder)
+                        {
+                            AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                        }
+                        // Add radial shadow fins.
+                        AddRadialShadowFins(worldPoints, lightPosXZ, cam, screenWidth, screenHeight, vertices, triangles);
+
+                        // Fill vertex colors for all new vertices.
+                        for (int v = vertsBefore; v < vertices.Count; v++)
+                        {
+                            colors.Add(heightColor);
+                        }
                     }
                 }
 
