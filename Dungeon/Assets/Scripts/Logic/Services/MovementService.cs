@@ -11,12 +11,14 @@ namespace Dungeon.Logic.Services
         private WorldObjectService _objects;
         private ObstacleService _obstacles;
         private GridService _grid;
+        private UndergroundService _underground;
 
         public void Initialize(LogicWorld world)
         {
-            _objects   = world.Get<WorldObjectService>();
-            _obstacles = world.Get<ObstacleService>();
-            _grid      = world.Get<GridService>();
+            _objects      = world.Get<WorldObjectService>();
+            _obstacles    = world.Get<ObstacleService>();
+            _grid         = world.Get<GridService>();
+            _underground  = world.Get<UndergroundService>();
         }
 
         public void Tick(float deltaTime)
@@ -88,6 +90,12 @@ namespace Dungeon.Logic.Services
             obj.SetPosition(resolvedPos, _grid.CellSize, _grid.XZOffset, _grid.Elevation);
         }
 
+        // Returns true if a cell is blocked by any obstacle or by unrevealed underground.
+        private bool IsCellBlocked(Vector3Int cell)
+        {
+            return _obstacles.IsBlocked(cell) || _underground.IsImplicitlyBlocked(cell);
+        }
+
         // Per-axis collision resolution for wall sliding.
         // Tries full movement first; if blocked, tries each axis independently.
         private Vector3 ResolveCollision(Vector3 current, Vector3 candidate)
@@ -98,7 +106,7 @@ namespace Dungeon.Logic.Services
 
             // Fast path: target cell is clear — allow full movement.
             Vector3Int candidateCell = WorldObject.ComputeCell(candidate, cellSize, offset, elevation);
-            if (!_obstacles.IsBlocked(candidateCell))
+            if (!IsCellBlocked(candidateCell))
             {
                 return candidate;
             }
@@ -109,14 +117,14 @@ namespace Dungeon.Logic.Services
 
             // X axis only.
             Vector3Int xCell = WorldObject.ComputeCell(new Vector3(candidate.x, current.y, current.z), cellSize, offset, elevation);
-            if (_obstacles.IsBlocked(xCell))
+            if (IsCellBlocked(xCell))
             {
                 finalX = current.x;
             }
 
             // Z axis only.
             Vector3Int zCell = WorldObject.ComputeCell(new Vector3(current.x, current.y, candidate.z), cellSize, offset, elevation);
-            if (_obstacles.IsBlocked(zCell))
+            if (IsCellBlocked(zCell))
             {
                 finalZ = current.z;
             }
@@ -124,7 +132,7 @@ namespace Dungeon.Logic.Services
             // Final diagonal check — if the combined result is still blocked, don't move.
             Vector3 resolved = new Vector3(finalX, current.y, finalZ);
             Vector3Int resolvedCell = WorldObject.ComputeCell(resolved, cellSize, offset, elevation);
-            if (_obstacles.IsBlocked(resolvedCell))
+            if (IsCellBlocked(resolvedCell))
             {
                 return current;
             }

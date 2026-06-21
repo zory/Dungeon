@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Dungeon.Logic;
+using Dungeon.Logic.Core;
 using Dungeon.Logic.Services;
 using Dungeon.Visuals.Core;
 using UnityEngine;
@@ -28,20 +29,25 @@ namespace Dungeon.Visuals.Services
     public class CharacterService : IVisualService
     {
         private WorldObjectService _objects;
+        private GridService _grid;
 
         private readonly List<CharacterInstance> _characters = new();
 
         public void Initialize(VisualWorld world)
         {
             _objects = world.GetLogic<WorldObjectService>();
+            _grid    = world.GetLogic<GridService>();
         }
 
         // Creates a character WorldObject with a Mover feature.
         // Interactor/Interactable are added by the bootstrapper from authoring components.
+        // rootTransform is the character's root GameObject — used for position sync.
+        // SpriteRenderer can live on a child object.
         // Returns the assigned object ID (used to wire PlayerInputService).
-        public int AddCharacter(CharacterConfig config, SpriteRenderer spriteRenderer)
+        public int AddCharacter(CharacterConfig config, SpriteRenderer spriteRenderer, Transform rootTransform)
         {
             var obj = new WorldObject(config.Name, config.SpawnPosition);
+            obj.SetPosition(config.SpawnPosition, _grid.CellSize, _grid.XZOffset, _grid.Elevation);
             int id = _objects.Register(obj);
             obj.AddFeature(new Mover(config.WalkSpeed));
 
@@ -50,6 +56,7 @@ namespace Dungeon.Visuals.Services
                 ObjectId = id,
                 Config = config,
                 SpriteRenderer = spriteRenderer,
+                RootTransform = rootTransform,
                 CurrentFacing = Facing.Down,
             });
 
@@ -76,10 +83,7 @@ namespace Dungeon.Visuals.Services
                     }
                 }
 
-                // Sync visual transform to logic position.
-                Vector3 logicPos = obj.WorldPosition;
-                Transform t = ch.SpriteRenderer.transform;
-                t.position = new Vector3(logicPos.x, t.position.y, logicPos.z);
+                // Position sync handled by WorldObjectVisualSyncService for all movers.
             }
         }
 
@@ -123,6 +127,7 @@ namespace Dungeon.Visuals.Services
             public int ObjectId;
             public CharacterConfig Config;
             public SpriteRenderer SpriteRenderer;
+            public Transform RootTransform;
             public Facing CurrentFacing;
         }
     }

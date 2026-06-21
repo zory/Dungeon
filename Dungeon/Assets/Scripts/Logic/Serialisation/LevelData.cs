@@ -30,7 +30,7 @@ namespace Dungeon.Logic.Serialisation
         public int TileTypeId;
     }
 
-    // One authored world object.  TypeId is looked up in ObjectDefinitionRegistry at load time.
+    // One authored world object.  TypeId is looked up in WorldObjectDatabase at load time.
     [Serializable]
     public class ObjectData
     {

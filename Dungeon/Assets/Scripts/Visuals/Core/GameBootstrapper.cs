@@ -17,8 +17,10 @@ namespace Dungeon.Visuals
 
         private LogicWorld _logicWorld;
         private VisualWorld _visualWorld;
+        private System.Action<System.Collections.Generic.IReadOnlyList<UnityEngine.Vector3Int>> _onCellsRevealedHandler;
 
         public LogicWorld LogicWorld => _logicWorld;
+        public VisualWorld VisualWorld => _visualWorld;
 
         private void Awake()
         {
@@ -33,6 +35,9 @@ namespace Dungeon.Visuals
             _logicWorld.InitializeAll();
             _visualWorld.InitializeAll();
 
+            // When underground cells are revealed, rebuild the affected visual chunks.
+            WireUndergroundVisualRebuild();
+
             // Register world objects (static entities) and their features.
             RegisterWorldObjects();
 
@@ -40,10 +45,10 @@ namespace Dungeon.Visuals
             RegisterCharacters();
 
             // If loading a saved game, populate the grid from save data.
-            if (GameSession.Mode == GameSession.StartMode.LoadGame && GameSession.LoadedSaveData != null)
+            if (GameSession.Instance.Mode == GameSession.StartMode.LoadGame && GameSession.Instance.LoadedSaveData != null)
             {
-                ApplySaveData(GameSession.LoadedSaveData);
-                GameSession.LoadedSaveData = null;
+                ApplySaveData(GameSession.Instance.LoadedSaveData);
+                GameSession.Instance.LoadedSaveData = null;
             }
         }
 
@@ -56,9 +61,43 @@ namespace Dungeon.Visuals
 
         private void OnDestroy()
         {
+            if (_onCellsRevealedHandler != null && _logicWorld != null)
+            {
+                if (_logicWorld.TryGet<UndergroundService>(out UndergroundService underground))
+                {
+                    underground.OnCellsRevealed -= _onCellsRevealedHandler;
+                }
+            }
             _visualWorld?.DisposeAll();
             _logicWorld?.DisposeAll();
             if (Instance == this) { Instance = null; }
+        }
+
+        private void WireUndergroundVisualRebuild()
+        {
+            UndergroundService underground = _logicWorld.Get<UndergroundService>();
+            WorldRenderService worldRender = _visualWorld.Get<WorldRenderService>();
+
+            _onCellsRevealedHandler = (revealedCells) =>
+            {
+                // Determine which chunks need visual rebuilding.
+                var affectedChunks = new System.Collections.Generic.HashSet<Vector2Int>();
+                foreach (Vector3Int cell in revealedCells)
+                {
+                    Vector2Int chunkCoord = GridService.CellToChunk(cell.x, cell.z);
+                    affectedChunks.Add(chunkCoord);
+                    // Rebuild cardinal neighbours for dual-grid edge correctness.
+                    affectedChunks.Add(new Vector2Int(chunkCoord.x - 1, chunkCoord.y));
+                    affectedChunks.Add(new Vector2Int(chunkCoord.x + 1, chunkCoord.y));
+                    affectedChunks.Add(new Vector2Int(chunkCoord.x, chunkCoord.y - 1));
+                    affectedChunks.Add(new Vector2Int(chunkCoord.x, chunkCoord.y + 1));
+                }
+                foreach (Vector2Int chunkCoord in affectedChunks)
+                {
+                    worldRender.RebuildChunk(chunkCoord);
+                }
+            };
+            underground.OnCellsRevealed += _onCellsRevealedHandler;
         }
 
         // ── Logic Services (deterministic order) ───────────────────────────────────────
@@ -75,19 +114,31 @@ namespace Dungeon.Visuals
             var worldGenConfig = worldGenAuthoring != null ? worldGenAuthoring.GetConfig() : WorldGenerationConfig.Default;
 
             // Override seed based on GameSession mode.
-            if (GameSession.Mode == GameSession.StartMode.NewGame)
+            if (GameSession.Instance.Mode == GameSession.StartMode.NewGame)
             {
                 worldGenConfig.RandomizeSeed = true;
             }
-            else if (GameSession.Mode == GameSession.StartMode.LoadGame && GameSession.LoadedSaveData != null)
+            else if (GameSession.Instance.Mode == GameSession.StartMode.LoadGame && GameSession.Instance.LoadedSaveData != null)
             {
                 worldGenConfig.RandomizeSeed = false;
-                worldGenConfig.Seed = GameSession.LoadedSaveData.Seed;
+                worldGenConfig.Seed = GameSession.Instance.LoadedSaveData.Seed;
             }
 
-            _logicWorld.Register(new WorldGenerationService(worldGenConfig));
+            // Extract generation rules from the terrain database.
+            var worldRenderAuthoring = FindAnyObjectByType<WorldRenderAuthoring>();
+            TerrainGenerationRule[] generationRules = worldRenderAuthoring != null && worldRenderAuthoring.TerrainAtlas != null
+                ? worldRenderAuthoring.TerrainAtlas.GetGenerationRules()
+                : System.Array.Empty<TerrainGenerationRule>();
 
-            // 3. ChunkLoadingService — infinite chunk streaming
+            _logicWorld.Register(new WorldGenerationService(worldGenConfig, generationRules));
+
+            // 3. UndergroundService — fog-of-war for underground levels
+            int emptyId = worldRenderAuthoring != null && worldRenderAuthoring.TerrainAtlas != null
+                ? worldRenderAuthoring.TerrainAtlas.EmptyId
+                : 0;
+            _logicWorld.Register(new UndergroundService(emptyId));
+
+            // 4. ChunkLoadingService — infinite chunk streaming
             var chunkLoadingAuthoring = FindAnyObjectByType<ChunkLoadingAuthoring>();
             var chunkLoadingConfig = chunkLoadingAuthoring != null ? chunkLoadingAuthoring.GetConfig() : ChunkLoadingConfig.Default;
             _logicWorld.Register(new ChunkLoadingService(chunkLoadingConfig));
@@ -103,6 +154,11 @@ namespace Dungeon.Visuals
 
             // 7. MovementService — processes all movers, resolves obstacle collision
             _logicWorld.Register(new MovementService());
+
+            // 8. LightingService — global directional light + per-tile light state
+            var lightingAuthoring = FindAnyObjectByType<LightingAuthoring>();
+            var lightingConfig = lightingAuthoring != null ? lightingAuthoring.GetConfig() : LightingConfig.Default;
+            _logicWorld.Register(new LightingService(lightingConfig));
         }
 
         // ── Visual Services (deterministic order) ──────────────────────────────────────
@@ -115,7 +171,10 @@ namespace Dungeon.Visuals
             var cameraConfig = cameraAuthoring != null ? cameraAuthoring.GetConfig() : CameraConfig.Default;
             _visualWorld.Register(new CameraService(cameraConfig, cam));
 
-            // 2. ElevationService — +/- input for elevation switching
+            // 2. LightingVisualService — syncs scene MonoBehaviours to Logic lighting features
+            _visualWorld.Register(new LightingVisualService());
+
+            // 3. ElevationService — +/- input for elevation switching
             _visualWorld.Register(new ElevationService());
 
             // 3. GridRenderService — GL grid lines
@@ -150,16 +209,23 @@ namespace Dungeon.Visuals
             // 8. CharacterService — character entity creation + visual sync
             _visualWorld.Register(new CharacterService());
 
-            // 9. EditorService — paint/erase/place tools
-            var editorAuthoring = FindAnyObjectByType<EditorAuthoring>();
-            if (editorAuthoring != null)
+            // 9. WorldObjectVisualSyncService — transform sync for all movers
+            _visualWorld.Register(new WorldObjectVisualSyncService());
+
+            // 10. ObstacleVisualService — colored sprites for programmatic obstacles
             {
-                _visualWorld.Register(new EditorService(editorAuthoring.GetConfig()));
+                TerrainAtlas terrainAtlas = worldRenderAuthoring != null ? worldRenderAuthoring.TerrainAtlas : null;
+                WorldObjectDatabase objectDatabase = worldRenderAuthoring != null ? worldRenderAuthoring.WorldObjectDatabase : null;
+                if (terrainAtlas != null)
+                {
+                    _visualWorld.Register(new ObstacleVisualService(terrainAtlas, objectDatabase));
+                }
+                else
+                {
+                    Debug.LogWarning("[GameBootstrapper] TerrainAtlas not found — obstacle visuals disabled.");
+                }
             }
-            else
-            {
-                _visualWorld.Register(new EditorService(new EditorConfig { SavePath = "Assets/Levels/level.json" }));
-            }
+
         }
 
         // ── WorldObject Registration ──────────────────────────────────────────────────
@@ -170,6 +236,7 @@ namespace Dungeon.Visuals
             ObstacleService obstacleService = _logicWorld.Get<ObstacleService>();
             InteractionService interactionService = _logicWorld.Get<InteractionService>();
             GridService gridService = _logicWorld.Get<GridService>();
+            WorldObjectVisualSyncService visualSync = _visualWorld.Get<WorldObjectVisualSyncService>();
 
             WorldObjectAuthoring[] authorings = FindObjectsByType<WorldObjectAuthoring>(FindObjectsInactive.Exclude);
             foreach (WorldObjectAuthoring authoring in authorings)
@@ -190,6 +257,7 @@ namespace Dungeon.Visuals
                 if (moverAuthoring != null)
                 {
                     obj.AddFeature(new Logic.Mover(moverAuthoring.MaxSpeed, moverAuthoring.Acceleration));
+                    visualSync.Track(obj.Id, authoring.transform);
                 }
 
                 // If this object is an obstacle, register blocked cells.
@@ -214,13 +282,17 @@ namespace Dungeon.Visuals
             PlayerInputService playerInput = _visualWorld.Get<PlayerInputService>();
             WorldObjectService objectService = _logicWorld.Get<WorldObjectService>();
             InteractionService interactionService = _logicWorld.Get<InteractionService>();
+            WorldObjectVisualSyncService visualSync = _visualWorld.Get<WorldObjectVisualSyncService>();
 
             CharacterAuthoring[] authorings = FindObjectsByType<CharacterAuthoring>(FindObjectsInactive.Exclude);
             foreach (CharacterAuthoring authoring in authorings)
             {
                 CharacterConfig config = authoring.GetConfig();
-                int objectId = characterService.AddCharacter(config, authoring.SpriteRenderer);
+                int objectId = characterService.AddCharacter(config, authoring.SpriteRenderer, authoring.transform);
                 Logic.WorldObject obj = objectService.Get(objectId);
+
+                // Position sync for all movers (characters + world objects) in one service.
+                visualSync.Track(objectId, authoring.transform);
 
                 // Wire interactable and interactor from authoring components on the character prefab.
                 WireInteractable(obj, authoring.gameObject, interactionService);

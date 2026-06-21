@@ -7,14 +7,23 @@ namespace Dungeon.Logic
     // BlockedLocalCells uses Vector2Int where X = grid X offset, Y = grid Z offset.
     // These cells don't have to match the Footprint exactly — an object can occupy
     // cells (0,0), (1,0), (2,0) but only block (0,0) and (2,0), leaving a gap.
+    //
+    // ObstacleTypeId identifies the material/terrain type of this obstacle (matches terrain atlas IDs).
+    // When > 0, the visual layer auto-generates a colored sprite. Surface-authored obstacles
+    // leave it at 0 (they already have scene visuals).
     public class Obstacle
     {
         private readonly List<Vector2Int> _blockedLocalCells;
 
         public IReadOnlyList<Vector2Int> BlockedLocalCells => _blockedLocalCells;
 
-        public Obstacle(List<Vector2Int> blockedLocalCells)
+        // Terrain atlas ID representing the obstacle's material (e.g. dirt, rock).
+        // 0 means no auto-visual (obstacle has its own scene visual).
+        public int ObstacleTypeId { get; set; }
+
+        public Obstacle(List<Vector2Int> blockedLocalCells, int obstacleTypeId = 0)
         {
+            ObstacleTypeId = obstacleTypeId;
             _blockedLocalCells = blockedLocalCells != null && blockedLocalCells.Count > 0
                 ? new List<Vector2Int>(blockedLocalCells)
                 : new List<Vector2Int> { Vector2Int.zero };

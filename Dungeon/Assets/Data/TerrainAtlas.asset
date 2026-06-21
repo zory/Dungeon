@@ -1,0 +1,101 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: adaa1b1f1b105d1469c7a88ad305cd55, type: 3}
+  m_Name: TerrainAtlas
+  m_EditorClassIdentifier: Dungeon.Visuals::Dungeon.Visuals.TerrainAtlas
+  _texture: {fileID: 2800000, guid: b0433cb769f50244da897cf9df296bd2, type: 3}
+  _columns: 4
+  _rows: 4
+  _terrains:
+  - Id: 1
+    Name: Water
+    Priority: 100
+    Color: {r: 0, g: 0.3233723, b: 0.8207547, a: 1}
+    FirstTileIndex: 0
+    SurfaceHeightMin: 0
+    SurfaceHeightMax: 0.32
+    UndergroundDepthMin: 0
+    UndergroundDepthMax: 0
+    ExtendsUnderground: 1
+    SecondaryNoiseScale: 0
+    SecondaryNoiseThreshold: 0
+    SecondaryTileId: 0
+  - Id: 2
+    Name: Grass
+    Priority: 400
+    Color: {r: 0, g: 0.4716981, b: 0.09633333, a: 1}
+    FirstTileIndex: 0
+    SurfaceHeightMin: 0.4
+    SurfaceHeightMax: 0.75
+    UndergroundDepthMin: 0
+    UndergroundDepthMax: 0
+    ExtendsUnderground: 0
+    SecondaryNoiseScale: 0.08
+    SecondaryNoiseThreshold: 0.62
+    SecondaryTileId: 6
+  - Id: 3
+    Name: Dirt
+    Priority: 300
+    Color: {r: 0.6132076, g: 0.41704747, b: 0.373131, a: 1}
+    FirstTileIndex: 0
+    SurfaceHeightMin: 0.75
+    SurfaceHeightMax: 1.01
+    UndergroundDepthMin: 0
+    UndergroundDepthMax: 0
+    ExtendsUnderground: 0
+    SecondaryNoiseScale: 0
+    SecondaryNoiseThreshold: 0
+    SecondaryTileId: 0
+  - Id: 4
+    Name: Rock
+    Priority: 200
+    Color: {r: 0.4811321, g: 0.4811321, b: 0.4811321, a: 1}
+    FirstTileIndex: 0
+    SurfaceHeightMin: -1
+    SurfaceHeightMax: -1
+    UndergroundDepthMin: 4
+    UndergroundDepthMax: 9999
+    ExtendsUnderground: 0
+    SecondaryNoiseScale: 0
+    SecondaryNoiseThreshold: 0
+    SecondaryTileId: 0
+  - Id: 5
+    Name: Sand
+    Priority: 350
+    Color: {r: 0.9056604, g: 0.8331498, b: 0.5765498, a: 1}
+    FirstTileIndex: 0
+    SurfaceHeightMin: 0.32
+    SurfaceHeightMax: 0.4
+    UndergroundDepthMin: 0
+    UndergroundDepthMax: 0
+    ExtendsUnderground: 0
+    SecondaryNoiseScale: 0
+    SecondaryNoiseThreshold: 0
+    SecondaryTileId: 0
+  - Id: 6
+    Name: Gravel
+    Priority: 250
+    Color: {r: 0.65, g: 0.55, b: 0.45, a: 1}
+    FirstTileIndex: 0
+    SurfaceHeightMin: -1
+    SurfaceHeightMax: -1
+    UndergroundDepthMin: 1
+    UndergroundDepthMax: 3
+    ExtendsUnderground: 0
+    SecondaryNoiseScale: 0
+    SecondaryNoiseThreshold: 0
+    SecondaryTileId: 0
+  _notInitializedId: -1
+  _emptyId: 0
+  _notRevealedFirstTileIndex: 0
+  _notRevealedColor: {r: 0, g: 0, b: 0, a: 1}
+  _notRevealedPriority: 9999

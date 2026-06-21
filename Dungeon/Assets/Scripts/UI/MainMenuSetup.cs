@@ -58,14 +58,14 @@ namespace Dungeon.UI
 
         private void HandleNewGame()
         {
-            GameSession.Mode = GameSession.StartMode.NewGame;
-            GameSession.LoadedSaveData = null;
+            GameSession.Instance.Mode = GameSession.StartMode.NewGame;
+            GameSession.Instance.LoadedSaveData = null;
             SceneManager.LoadScene(_gameplaySceneName);
         }
 
         private void HandleLoadGame()
         {
-            string path = GameSession.SaveFilePath;
+            string path = GameSession.Instance.SaveFilePath;
             if (!File.Exists(path))
             {
                 Debug.LogWarning($"[MainMenuSetup] No save file found at: {path}");
@@ -80,8 +80,8 @@ namespace Dungeon.UI
                 return;
             }
 
-            GameSession.Mode = GameSession.StartMode.LoadGame;
-            GameSession.LoadedSaveData = saveData;
+            GameSession.Instance.Mode = GameSession.StartMode.LoadGame;
+            GameSession.Instance.LoadedSaveData = saveData;
             SceneManager.LoadScene(_gameplaySceneName);
         }
 

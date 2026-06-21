@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Dungeon.Logic.Core;
 using UnityEngine;
@@ -11,6 +12,12 @@ namespace Dungeon.Logic.Services
     {
         private readonly HashSet<Vector3Int> _blockedCells = new();
         private readonly Dictionary<int, List<Vector3Int>> _cellsByObjectId = new();
+
+        // Fired when an obstacle WorldObject is registered (visual layer creates sprites).
+        public event Action<WorldObject> OnObstacleRegistered;
+
+        // Fired when an obstacle is removed by objectId (visual layer destroys sprites).
+        public event Action<int> OnObstacleUnregistered;
 
         public void Initialize(LogicWorld world) { }
 
@@ -28,6 +35,8 @@ namespace Dungeon.Logic.Services
             {
                 _blockedCells.Add(worldCells[i]);
             }
+
+            OnObstacleRegistered?.Invoke(obj);
         }
 
         // Remove all blocked cells belonging to the given object.
@@ -40,6 +49,8 @@ namespace Dungeon.Logic.Services
                 _blockedCells.Remove(cells[i]);
             }
             _cellsByObjectId.Remove(objectId);
+
+            OnObstacleUnregistered?.Invoke(objectId);
         }
 
         // Returns true if the given world cell is blocked by any obstacle.

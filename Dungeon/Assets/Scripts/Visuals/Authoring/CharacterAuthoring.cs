@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace Dungeon.Visuals.Authoring
 {
-    [RequireComponent(typeof(SpriteRenderer))]
     public class CharacterAuthoring : MonoBehaviour
     {
         [Header("Setup")]
@@ -17,7 +16,8 @@ namespace Dungeon.Visuals.Authoring
         [SerializeField] private Sprite _spriteLeft;
         [SerializeField] private Sprite _spriteRight;
 
-        public SpriteRenderer SpriteRenderer => GetComponent<SpriteRenderer>();
+        // SpriteRenderer can live on a child object (preferred) or on the root.
+        public SpriteRenderer SpriteRenderer => GetComponentInChildren<SpriteRenderer>();
 
         public CharacterConfig GetConfig() => new CharacterConfig
         {

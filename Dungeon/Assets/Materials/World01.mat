@@ -33,7 +33,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: cf5b1bd09351913499e58a4ee4f10984, type: 3}
+        m_Texture: {fileID: 2800000, guid: b0433cb769f50244da897cf9df296bd2, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MaskTex:
@@ -53,6 +53,8 @@ Material:
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
     - _AlphaToMask: 0
+    - _AtlasColumns: 4
+    - _AtlasRows: 4
     - _Blend: 0
     - _BlendOp: 0
     - _Cull: 2
@@ -61,6 +63,8 @@ Material:
     - _DstBlendAlpha: 0
     - _EnableExternalAlpha: 0
     - _Invert: 1
+    - _OutlineColumns: 6
+    - _OutlineRows: 1
     - _QueueOffset: 0
     - _SampleGI: 0
     - _SrcBlend: 1

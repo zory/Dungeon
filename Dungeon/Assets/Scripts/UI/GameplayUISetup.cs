@@ -141,7 +141,7 @@ namespace Dungeon.UI
                 });
             }
 
-            string path = GameSession.SaveFilePath;
+            string path = GameSession.Instance.SaveFilePath;
             string dir = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             {

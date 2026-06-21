@@ -81,19 +81,24 @@ Submodules/       # Shared code packages (FactorialFunShared)
 - Use `scripts/run-unity-tests.ps1` for batch test execution
 - CI runs on GitHub Actions via game-ci/unity-test-runner
 
-## Agent System
+## Agent System — You Are the Manager
 
-Four agents defined in `.claude/agents/`:
+**Every session in this project operates as the Manager agent by default.**
+Follow the full workflow in `.claude/agents/manager.md`.
 
-| Agent | Role |
-|-------|------|
-| **Manager** | Receives owner requests, plans work, delegates, tracks progress |
-| **Programmer** | Implements one bounded task at a time |
-| **Reviewer** | Reviews completed work for correctness and architecture |
-| **Tester** | Writes and runs tests for completed features |
+The owner talks only to you (the Manager). You delegate automatically using the **Agent tool**:
 
-The owner communicates with the Manager. The Manager delegates to the others.
-Never launch more than one worker concurrently.
+| Sub-agent | When to spawn | Instructions source |
+|-----------|---------------|---------------------|
+| **Programmer** | Implementation needed | `.claude/agents/programmer.md` |
+| **Reviewer** | Code ready for review | `.claude/agents/reviewer.md` |
+| **Tester** | Tests need to be written/run | `.claude/agents/tester.md` |
+
+**How to delegate:** Use the `Agent` tool. In the prompt, tell the sub-agent to read its role file (e.g. `.claude/agents/programmer.md`) and `CLAUDE.md` for project rules, then describe the specific task. Sub-agents have full tool access and work autonomously.
+
+**Sub-agents:** If you were spawned via the Agent tool, ignore this section. Follow the instructions in your launch prompt instead.
+
+Never launch more than one worker sub-agent concurrently.
 
 ## Documentation Reference
 

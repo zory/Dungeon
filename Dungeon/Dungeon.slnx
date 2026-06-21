@@ -3,10 +3,10 @@
   <Project Path="Dungeon.Logic.csproj" />
   <Project Path="FactorialFun.Core.UI.csproj" />
   <Project Path="FactorialFun.Core.csproj" />
+  <Project Path="Dungeon.Editor.csproj" />
   <Project Path="FactorialFun.Core.Editor.csproj" />
   <Project Path="Dungeon.UI.csproj" />
   <Project Path="Dungeon.Tests.EditMode.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
   <Project Path="Dungeon.Tests.PlayMode.csproj" />
-  <Project Path="Dungeon.Editor.csproj" />
 </Solution>

@@ -1,33 +1,46 @@
 Shader "Dungeon/DualGridTile"
 {
-    // Per-layer dual-grid tile shader.
+    // Single-pass dual-grid terrain shader for URP.
     //
-    // Each terrain type renders as a separate sub-mesh layer, stacked
-    // bottom-to-top by priority with alpha blending.
+    // Each quad carries up to 4 terrain layers packed into vertex data.
+    // The fragment shader composites layers bottom-to-top: samples the tile
+    // from the atlas, multiplies RGB by the per-type colour (so white pixels
+    // become the terrain colour, dark pixels stay dark for outlines), then
+    // composites via source-over alpha blending.
     //
-    // Per-vertex COLOR     = terrain tint (RGBA; A < 1 for semi-transparent terrain)
-    // Per-vertex TEXCOORD1 = flags: x = invert shape (0 normal, 1 complement)
+    // VERTEX DATA
+    // ───────────
+    //   TEXCOORD0 — local quad UV [0,1]
+    //   TEXCOORD1 — packed (terrainTileIndex × 4 + rotation) per layer (xyzw)
+    //               rotation is always 0 (each bitmask has its own pre-painted tile)
+    //   TEXCOORD2 — x = active layer count
+    //   TEXCOORD3 — packed RGB colour per layer (xyzw)
+    //              (R×65536 + G×256 + B, each channel 0–255)
     //
-    // _MainTex (Shape Atlas):
-    //   Alpha defines terrain presence (1 = terrain, 0 = see-through).
-    //   8 tiles with complement trick: shader inverts alpha when flag is set.
-    //   RGB is ignored.
-    //
-    // _OutlineTex (Outline Atlas, optional):
-    //   Alpha defines where border lines are drawn.
-    //   RGB defines the outline colour (typically black).
-    //   Same 8-tile layout as the shape atlas.  NOT inverted on complement.
-    //   Draw border pixels on BOTH sides of each transition edge so that
-    //   both the direct and complement bitmask show an outline within
-    //   their filled region.
+    // ATLAS TEXTURE (_MainTex)
+    // ────────────────────────
+    //   Full RGBA tiles.  Alpha = terrain presence (1 inside, 0 outside).
+    //   RGB = painted appearance (outlines/borders baked in, typically white
+    //         fill with dark border pixels — the per-type colour tints it).
+    //   16 tiles per terrain type — one per bitmask (0–15), asymmetric,
+    //   no UV rotation applied.
+
     Properties
     {
-        _MainTex    ("Shape Atlas",   2D) = "white" {}
-        _OutlineTex ("Outline Atlas", 2D) = "black" {}
+        [MainTexture] _MainTex ("Terrain Atlas", 2D) = "white" {}
+        _AtlasColumns ("Atlas Columns", Float) = 8
+        _AtlasRows    ("Atlas Rows",    Float) = 8
     }
+
     SubShader
     {
-        Tags { "Queue" = "Transparent" "RenderType" = "Transparent" "IgnoreProjector" = "True" }
+        Tags
+        {
+            "RenderType"      = "Transparent"
+            "Queue"           = "Transparent"
+            "RenderPipeline"  = "UniversalPipeline"
+            "IgnoreProjector" = "True"
+        }
 
         Blend SrcAlpha OneMinusSrcAlpha
         ZWrite Off
@@ -35,55 +48,165 @@ Shader "Dungeon/DualGridTile"
 
         Pass
         {
-            CGPROGRAM
+            Name "DualGridTile"
+            Tags { "LightMode" = "SRPDefaultUnlit" }
+
+            HLSLPROGRAM
             #pragma vertex   vert
             #pragma fragment frag
-            #include "UnityCG.cginc"
 
-            sampler2D _MainTex;
-            sampler2D _OutlineTex;
-            float4    _MainTex_ST;
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
-            struct appdata
+            TEXTURE2D(_MainTex);
+            SAMPLER(sampler_point_clamp);
+
+            // Global light map texture set by the LightMap renderer feature.
+            // When not set, Unity provides a white default → fully lit fallback.
+            TEXTURE2D(_LightMap);
+            float4 _LightMapParams; // xy = screen width/height
+
+            CBUFFER_START(UnityPerMaterial)
+                float4 _MainTex_TexelSize;   // auto-set by Unity: (1/w, 1/h, w, h)
+                float  _AtlasColumns;
+                float  _AtlasRows;
+            CBUFFER_END
+
+            // ── Vertex structures ────────────────────────────────────────────
+
+            struct Attributes
             {
-                float4 vertex : POSITION;
-                float2 uv     : TEXCOORD0;
-                fixed4 color  : COLOR;      // terrain tint (RGBA)
-                float4 flags  : TEXCOORD1;  // x = invert shape (0 or 1)
+                float4 positionOS  : POSITION;
+                float2 uv          : TEXCOORD0;
+                float4 terrainInfo : TEXCOORD1;  // packed per-layer tile info
+                float2 layerInfo   : TEXCOORD2;  // x = layer count
+                float4 colorInfo   : TEXCOORD3;  // packed RGB per layer
             };
 
-            struct v2f
+            struct Varyings
             {
-                float4 pos    : SV_POSITION;
-                float2 uv     : TEXCOORD0;
-                fixed4 color  : TEXCOORD1;
-                fixed  invert : TEXCOORD2;
+                float4 positionCS                   : SV_POSITION;
+                float2 uv                           : TEXCOORD0;
+                nointerpolation float4 terrainInfo  : TEXCOORD1;
+                nointerpolation float  layerCount   : TEXCOORD2;
+                nointerpolation float4 colorInfo    : TEXCOORD3;
             };
 
-            v2f vert(appdata v)
+            // ── UV rotation ──────────────────────────────────────────────────
+
+            // Rotates a [0,1] quad UV clockwise by rotation × 90°.
+            //   rot 0: identity
+            //   rot 1 (90° CW):  u' = 1−v, v' = u
+            //   rot 2 (180°):    u' = 1−u, v' = 1−v
+            //   rot 3 (270° CW): u' = v,   v' = 1−u
+            float2 RotateUV(float2 uv, int rot)
             {
-                v2f o;
-                o.pos    = UnityObjectToClipPos(v.vertex);
-                o.uv     = TRANSFORM_TEX(v.uv, _MainTex);
-                o.color  = v.color;
-                o.invert = v.flags.x;
+                if (rot == 1) { return float2(1.0 - uv.y, uv.x);       }
+                if (rot == 2) { return float2(1.0 - uv.x, 1.0 - uv.y); }
+                if (rot == 3) { return float2(uv.y, 1.0 - uv.x);       }
+                return uv;
+            }
+
+            // ── Colour unpacking ─────────────────────────────────────────────
+
+            // Unpacks RGB from a single float: R×65536 + G×256 + B → half3.
+            half3 UnpackRGB(float packed)
+            {
+                float r = floor(packed / 65536.0);
+                float rem = packed - r * 65536.0;
+                float g = floor(rem / 256.0);
+                float b = rem - g * 256.0;
+                return half3(r, g, b) / 255.0h;
+            }
+
+            // ── Tile sampling ────────────────────────────────────────────────
+
+            // Samples a full RGBA tile from the atlas at the given slot with UV rotation.
+            half4 SampleTile(float2 localUV, int tileIdx, int rotation)
+            {
+                float2 rotated = RotateUV(localUV, rotation);
+
+                int   cols = (int)_AtlasColumns;
+                float tileW = 1.0 / _AtlasColumns;
+                float tileH = 1.0 / _AtlasRows;
+                int   col = tileIdx % cols;
+                int   row = tileIdx / cols;
+                float2 tileOrigin = float2((float)col * tileW, 1.0 - (float)(row + 1) * tileH);
+
+                // Half-texel inset prevents sampling into adjacent atlas tiles.
+                float2 halfTexel = 0.5 * _MainTex_TexelSize.xy;
+                float2 tileMin = tileOrigin + halfTexel;
+                float2 tileMax = tileOrigin + float2(tileW, tileH) - halfTexel;
+                float2 atlasUV = clamp(tileOrigin + rotated * float2(tileW, tileH), tileMin, tileMax);
+
+                return SAMPLE_TEXTURE2D(_MainTex, sampler_point_clamp, atlasUV);
+            }
+
+            // ── Vertex shader ────────────────────────────────────────────────
+
+            Varyings vert(Attributes v)
+            {
+                Varyings o;
+                o.positionCS  = TransformObjectToHClip(v.positionOS.xyz);
+                o.uv          = v.uv;
+                o.terrainInfo = v.terrainInfo;
+                o.layerCount  = v.layerInfo.x;
+                o.colorInfo   = v.colorInfo;
                 return o;
             }
 
-            fixed4 frag(v2f i) : SV_Target
+            // ── Fragment shader ──────────────────────────────────────────────
+
+            half4 frag(Varyings i) : SV_Target
             {
-                fixed  shapeA   = tex2D(_MainTex, i.uv).a;
-                fixed4 outline  = tex2D(_OutlineTex, i.uv);
+                int layerCount = (int)round(i.layerCount);
 
-                // Invert shape alpha for complement bitmask tiles.
-                fixed shape = lerp(shapeA, 1.0 - shapeA, i.invert);
+                float packed[4];
+                packed[0] = i.terrainInfo.x;
+                packed[1] = i.terrainInfo.y;
+                packed[2] = i.terrainInfo.z;
+                packed[3] = i.terrainInfo.w;
 
-                // Blend terrain tint towards outline colour where outline is present.
-                fixed3 rgb = lerp(i.color.rgb, outline.rgb, outline.a);
+                float colorPacked[4];
+                colorPacked[0] = i.colorInfo.x;
+                colorPacked[1] = i.colorInfo.y;
+                colorPacked[2] = i.colorInfo.z;
+                colorPacked[3] = i.colorInfo.w;
 
-                return fixed4(rgb, shape * i.color.a);
+                half4 result = half4(0, 0, 0, 0);
+
+                [unroll(4)]
+                for (int layer = 0; layer < 4; layer++)
+                {
+                    if (layer >= layerCount) { break; }
+
+                    int p       = (int)round(packed[layer]);
+                    int tileIdx = p / 4;
+                    int rot     = p % 4;
+
+                    half4 tile = SampleTile(i.uv, tileIdx, rot);
+
+                    // Tint tile RGB by the terrain type's colour.
+                    // White tile pixels → terrain colour, dark pixels → stay dark (outlines).
+                    half3 tintedRGB = tile.rgb * UnpackRGB(colorPacked[layer]);
+
+                    // Source-over composite using tile alpha.
+                    result.rgb = lerp(result.rgb, tintedRGB, tile.a);
+                    result.a   = saturate(result.a + tile.a * (1.0h - result.a));
+                }
+
+                // Binary lighting: sample the global light map using screen UV.
+                // SV_POSITION gives pixel coordinates in the fragment shader,
+                // so dividing by screen dimensions yields a [0,1] screen UV.
+                float2 screenUV = i.positionCS.xy / _LightMapParams.xy;
+                half lit = step(0.5h, SAMPLE_TEXTURE2D(_LightMap, sampler_point_clamp, screenUV).r);
+
+                // Lit: normal tinted appearance.  Unlit: inverted RGB (white outlines on black).
+                half3 unlitRGB = 1.0h - result.rgb;
+                result.rgb = lerp(unlitRGB, result.rgb, lit);
+
+                return result;
             }
-            ENDCG
+            ENDHLSL
         }
     }
 }

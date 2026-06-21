@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Dungeon.Logic;
 using Dungeon.Logic.Services;
+using Dungeon.Visuals;
 using Dungeon.Visuals.Core;
 using UnityEngine;
 
@@ -10,8 +11,7 @@ namespace Dungeon.Visuals.Services
     [Serializable]
     public struct WorldRenderConfig
     {
-        public DualGridAtlas Atlas;
-        public TileColorRegistry ColorRegistry;
+        public TerrainAtlas TerrainAtlas;
         public Material Material;
         public int ChunkUnloadRadius;
 
@@ -26,6 +26,7 @@ namespace Dungeon.Visuals.Services
         private GridService _grid;
         private ChunkLoadingService _chunkLoader;
         private CameraService _camera;
+        private UndergroundService _underground;
 
         private readonly Dictionary<Vector2Int, DualGridChunkRenderer> _chunks = new();
         private Vector2Int _lastRenderCenter = new(int.MinValue, int.MinValue);
@@ -41,6 +42,7 @@ namespace Dungeon.Visuals.Services
             _world = world;
             _grid = world.GetLogic<GridService>();
             _chunkLoader = world.GetLogic<ChunkLoadingService>();
+            _underground = world.GetLogic<UndergroundService>();
             _camera = world.Get<CameraService>();
             _chunkLoader.OnChunksLoaded += OnChunksLoaded;
         }
@@ -105,8 +107,10 @@ namespace Dungeon.Visuals.Services
         private void TryRebuildExisting(Vector2Int chunkCoord)
         {
             if (_chunks.TryGetValue(chunkCoord, out var chunk))
+            {
                 chunk.Build(chunkCoord, _grid.Grid, _grid.Elevation, _grid.CellSize,
-                            _config.Atlas, _config.ColorRegistry, _config.Material);
+                            _config.TerrainAtlas, _config.Material, _underground);
+            }
         }
 
         private void SpawnChunk(Vector2Int chunkCoord)
@@ -125,7 +129,7 @@ namespace Dungeon.Visuals.Services
 
             var chunk = go.AddComponent<DualGridChunkRenderer>();
             chunk.Build(chunkCoord, _grid.Grid, _grid.Elevation, _grid.CellSize,
-                        _config.Atlas, _config.ColorRegistry, _config.Material);
+                        _config.TerrainAtlas, _config.Material, _underground);
 
             _chunks[chunkCoord] = chunk;
         }
@@ -134,10 +138,14 @@ namespace Dungeon.Visuals.Services
         public void RebuildChunk(Vector2Int chunkCoord)
         {
             if (_chunks.TryGetValue(chunkCoord, out var existing))
+            {
                 existing.Build(chunkCoord, _grid.Grid, _grid.Elevation, _grid.CellSize,
-                               _config.Atlas, _config.ColorRegistry, _config.Material);
+                               _config.TerrainAtlas, _config.Material, _underground);
+            }
             else
+            {
                 SpawnChunk(chunkCoord);
+            }
         }
 
         // Clears all renderers, then spawns only chunks around camera at current elevation.
