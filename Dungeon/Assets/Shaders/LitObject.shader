@@ -97,11 +97,11 @@ Shader "Dungeon/LitObject"
                 half lit = step(0.5h, SAMPLE_TEXTURE2D(_LightMap, sampler_point_clamp, screenUV).r);
 
                 // Lit: normal tinted sprite.
-                // Unlit: inverted RGB from raw texture (no colour tint in darkness), preserve alpha for shape.
-                half3 unlitRGB = 1.0h - tex.rgb;
-                half  unlitAlpha = tex.a * i.color.a;
+                // Unlit: only outlines (dark pixels) shown as white; everything else pitch black.
+                half lum = dot(col.rgb, half3(0.299h, 0.587h, 0.114h));
+                half isOutline = 1.0h - step(0.1h, lum);
+                half3 unlitRGB = half3(isOutline, isOutline, isOutline);
                 col.rgb = lerp(unlitRGB, col.rgb, lit);
-                col.a   = lerp(unlitAlpha, col.a, lit);
 
                 return col;
             }
