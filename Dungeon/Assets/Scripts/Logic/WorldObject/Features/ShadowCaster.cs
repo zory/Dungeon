@@ -5,6 +5,7 @@ namespace Dungeon.Logic
     // Feature: marks a WorldObject as a shadow caster for the 2D lighting system.
     // Defines one or more polygon paths on the XZ plane that block light.
     // Multiple paths support complex shapes with holes (outer boundary CCW, holes CW).
+    // Shadow length is derived from the object's HeightProfile and the light's elevation angle.
     public class ShadowCaster
     {
         // Polygon paths in local space (XZ plane, relative to the object's position).
@@ -12,13 +13,6 @@ namespace Dungeon.Logic
         // For shapes with holes, the first path is the outer boundary (CCW) and
         // subsequent paths are holes (CW).
         public Vector2[][] LocalPaths { get; set; }
-
-        // Maximum shadow length in world units when global light is at full intensity.
-        public float MaxShadowLength { get; set; }
-
-        // Height of the caster. Determines shadow length and which objects get shadowed.
-        // Only objects with height < this value will be affected by this shadow.
-        public float Height { get; set; }
 
         // Whether this shadow caster is currently active. Disabled casters are skipped
         // during shadow rendering and light queries.
@@ -30,17 +24,15 @@ namespace Dungeon.Logic
         public bool SkipOccluder { get; set; }
 
         // Constructor for multiple polygon paths.
-        public ShadowCaster(Vector2[][] localPaths, float maxShadowLength, float height = 1f, bool enabled = true)
+        public ShadowCaster(Vector2[][] localPaths, bool enabled = true)
         {
             LocalPaths = localPaths;
-            MaxShadowLength = maxShadowLength;
-            Height = height;
             Enabled = enabled;
         }
 
         // Convenience constructor for a single polygon path.
-        public ShadowCaster(Vector2[] localPoints, float maxShadowLength, float height = 1f, bool enabled = true)
-            : this(localPoints != null ? new Vector2[][] { localPoints } : null, maxShadowLength, height, enabled)
+        public ShadowCaster(Vector2[] localPoints, bool enabled = true)
+            : this(localPoints != null ? new Vector2[][] { localPoints } : null, enabled)
         {
         }
 

@@ -5,7 +5,7 @@ namespace Dungeon.Visuals.Lighting
     // Marks a GameObject as a shadow caster for the custom 2D light map system.
     // Defines a polygon on the XZ plane that blocks light from reaching areas behind it.
     // If Points is empty/null and a BoxCollider is attached, the polygon is auto-derived from the collider bounds.
-    // Scene data holder — the LightingVisualService reads these and creates Logic features.
+    // Scene data holder - the LightingVisualService reads these and creates Logic features.
     public class ShadowCaster2DCustom : MonoBehaviour
     {
         [Tooltip("Polygon vertices in local space (XZ plane). If empty and a BoxCollider is present, auto-derived from collider bounds.")]
@@ -14,9 +14,9 @@ namespace Dungeon.Visuals.Lighting
         [Tooltip("Whether this shadow caster is currently active.")]
         public bool CastsShadows = true;
 
-        [Tooltip("Maximum shadow length in world units when global light is at full intensity.")]
-        [Min(0f)]
-        public float MaxShadowLength = 3f;
+        [Tooltip("Height of this caster in meters. Shadow length is derived from height and sun elevation angle.")]
+        [Min(0.01f)]
+        public float Height = 1f;
 
         // Returns the polygon vertices transformed to world space on the XZ plane.
         // Each returned Vector2 represents (worldX, worldZ).
@@ -76,6 +76,42 @@ namespace Dungeon.Visuals.Lighting
             }
 
             return null;
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            Vector2[] points = GetLocalPoints();
+            if (points == null || points.Length < 3) { return; }
+
+            // Draw shadow polygon outline on the XZ plane.
+            Gizmos.color = new Color(1f, 0.3f, 0.3f, 0.8f);
+            for (int i = 0; i < points.Length; i++)
+            {
+                Vector3 a = transform.TransformPoint(new Vector3(points[i].x, 0f, points[i].y));
+                Vector3 b = transform.TransformPoint(new Vector3(points[(i + 1) % points.Length].x, 0f, points[(i + 1) % points.Length].y));
+                Gizmos.DrawLine(a, b);
+            }
+
+            // Draw vertical height bar at the polygon centroid.
+            Vector2 centroid = Vector2.zero;
+            foreach (Vector2 point in points)
+            {
+                centroid += point;
+            }
+            centroid /= points.Length;
+
+            Vector3 groundPos = transform.TransformPoint(new Vector3(centroid.x, 0f, centroid.y));
+            // Reset Y to ground level in world space.
+            groundPos.y = 0f;
+            Vector3 topPos = groundPos + new Vector3(0f, Height, 0f);
+
+            Gizmos.color = new Color(1f, 0.5f, 0f, 0.8f);
+            Gizmos.DrawLine(groundPos, topPos);
+
+            // Tick marks.
+            float tickSize = 0.1f;
+            Gizmos.DrawLine(groundPos + new Vector3(-tickSize, 0f, 0f), groundPos + new Vector3(tickSize, 0f, 0f));
+            Gizmos.DrawLine(topPos + new Vector3(-tickSize, 0f, 0f), topPos + new Vector3(tickSize, 0f, 0f));
         }
     }
 }

@@ -21,6 +21,7 @@ MonoBehaviour:
     Priority: 100
     Color: {r: 0, g: 0.3233723, b: 0.8207547, a: 1}
     FirstTileIndex: 0
+    WallFirstTileIndex: 0
     SurfaceHeightMin: 0
     SurfaceHeightMax: 0.32
     UndergroundDepthMin: 0
@@ -34,6 +35,7 @@ MonoBehaviour:
     Priority: 400
     Color: {r: 0, g: 0.4716981, b: 0.09633333, a: 1}
     FirstTileIndex: 0
+    WallFirstTileIndex: 0
     SurfaceHeightMin: 0.4
     SurfaceHeightMax: 0.75
     UndergroundDepthMin: 0
@@ -47,6 +49,7 @@ MonoBehaviour:
     Priority: 300
     Color: {r: 0.6132076, g: 0.41704747, b: 0.373131, a: 1}
     FirstTileIndex: 0
+    WallFirstTileIndex: 0
     SurfaceHeightMin: 0.75
     SurfaceHeightMax: 1.01
     UndergroundDepthMin: 0
@@ -60,6 +63,7 @@ MonoBehaviour:
     Priority: 200
     Color: {r: 0.4811321, g: 0.4811321, b: 0.4811321, a: 1}
     FirstTileIndex: 0
+    WallFirstTileIndex: 0
     SurfaceHeightMin: -1
     SurfaceHeightMax: -1
     UndergroundDepthMin: 4
@@ -73,6 +77,7 @@ MonoBehaviour:
     Priority: 350
     Color: {r: 0.9056604, g: 0.8331498, b: 0.5765498, a: 1}
     FirstTileIndex: 0
+    WallFirstTileIndex: 0
     SurfaceHeightMin: 0.32
     SurfaceHeightMax: 0.4
     UndergroundDepthMin: 0
@@ -86,6 +91,7 @@ MonoBehaviour:
     Priority: 250
     Color: {r: 0.65, g: 0.55, b: 0.45, a: 1}
     FirstTileIndex: 0
+    WallFirstTileIndex: 0
     SurfaceHeightMin: -1
     SurfaceHeightMax: -1
     UndergroundDepthMin: 1
@@ -96,6 +102,12 @@ MonoBehaviour:
     SecondaryTileId: 0
   _notInitializedId: -1
   _emptyId: 0
+  _emptyFirstTileIndex: 0
+  _emptyColor: {r: 0, g: 0, b: 0, a: 1}
+  _emptyPriority: 0
+  _wallTexture: {fileID: 2800000, guid: 447820114c9ae0942b7cdcf7741de066, type: 3}
+  _wallColumns: 4
+  _wallRows: 4
   _notRevealedFirstTileIndex: 0
   _notRevealedColor: {r: 0, g: 0, b: 0, a: 1}
   _notRevealedPriority: 9999

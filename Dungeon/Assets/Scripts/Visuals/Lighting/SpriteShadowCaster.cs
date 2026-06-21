@@ -4,8 +4,7 @@ using UnityEngine;
 namespace Dungeon.Visuals.Lighting
 {
     // Shadow caster for sprite-based objects.
-    // Height determines shadow length and which shorter objects receive the shadow.
-    // Also sets _ObjectHeight on the SpriteRenderer's material for shadow receiving.
+    // Defines the shadow polygon shape only — height is handled by SpriteHeightProfile.
     //
     // Shadow shape can be defined two ways:
     //   1. ShadowShape sprite assigned: the shadow polygon is derived from the sprite's
@@ -19,12 +18,6 @@ namespace Dungeon.Visuals.Lighting
     [RequireComponent(typeof(SpriteRenderer))]
     public class SpriteShadowCaster : MonoBehaviour
     {
-        private static readonly int OBJECT_HEIGHT_ID = Shader.PropertyToID("_ObjectHeight");
-
-        [Tooltip("Height of this sprite. Determines shadow length and height-based filtering.")]
-        [Min(0.01f)]
-        public float Height = 1f;
-
         [Tooltip("Whether this object currently casts shadows.")]
         public bool CastsShadows = true;
 
@@ -38,28 +31,6 @@ namespace Dungeon.Visuals.Lighting
                  "If null, falls back to the rectangular BaseSize/BaseOffset shape. " +
                  "The sprite must have 'Generate Physics Shape' enabled in its import settings.")]
         public Sprite ShadowShape;
-
-        private SpriteRenderer _spriteRenderer;
-        private MaterialPropertyBlock _propertyBlock;
-        private float _lastHeight = -1f;
-
-        private void Awake()
-        {
-            _spriteRenderer = GetComponent<SpriteRenderer>();
-            _propertyBlock = new MaterialPropertyBlock();
-        }
-
-        private void LateUpdate()
-        {
-            // Push height to the material so the shader can compare against shadow height map.
-            if (!Mathf.Approximately(_lastHeight, Height))
-            {
-                _spriteRenderer.GetPropertyBlock(_propertyBlock);
-                _propertyBlock.SetFloat(OBJECT_HEIGHT_ID, Height);
-                _spriteRenderer.SetPropertyBlock(_propertyBlock);
-                _lastHeight = Height;
-            }
-        }
 
         // Returns the shadow caster polygon in local XZ space.
         // A small rectangle at the configured base position, not the full sprite bounds.
@@ -136,6 +107,21 @@ namespace Dungeon.Visuals.Lighting
             }
 
             return paths;
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            Vector2[] points = GetLocalPoints();
+            if (points == null || points.Length < 3) { return; }
+
+            // Draw shadow polygon outline on the XZ plane.
+            Gizmos.color = new Color(1f, 0.3f, 0.3f, 0.8f);
+            for (int i = 0; i < points.Length; i++)
+            {
+                Vector3 a = transform.TransformPoint(new Vector3(points[i].x, 0f, points[i].y));
+                Vector3 b = transform.TransformPoint(new Vector3(points[(i + 1) % points.Length].x, 0f, points[(i + 1) % points.Length].y));
+                Gizmos.DrawLine(a, b);
+            }
         }
 
         // Returns the polygon transformed to world-space XZ coordinates.

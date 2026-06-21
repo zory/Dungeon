@@ -16,17 +16,15 @@ namespace Dungeon.Visuals.Lighting
     // Supports two light types:
     //
     //   GLOBAL DIRECTIONAL LIGHT
-    //   ────────────────────────
-    //   Fills the entire light map with white (lit), then subtracts directional
-    //   shadow geometry behind shadow casters.  Shadow direction is opposite to
-    //   the global light direction.  Shadow length = MaxShadowLength × Intensity.
+    //   Shadow length = casterMaxHeight / tan(elevationAngle), capped at MaxShadowDistance.
+    //   Shadow height decreases linearly from caster edge (maxHeight) to shadow tip (0).
     //
     //   POINT LIGHTS
-    //   ────────────
-    //   Each LightSource is a hard-edged circle drawn with additive blending.
-    //   Per-light radial shadows are subtracted using BlendOp Min.
+    //   Each LightSource is a hard-edged circle. Shadow extrusion is height-aware:
+    //   lightHeight > casterMaxHeight => finite shadow (similar triangles).
+    //   lightHeight <= casterMaxHeight => shadow extends to light radius (capped).
     //
-    // Rendering order: global light → global shadows → point lights → point shadows.
+    // Rendering order: global light -> global shadows -> point lights -> point shadows.
     // Point lights can illuminate areas that are in global shadow.
     public class LightMapRendererFeature : ScriptableRendererFeature
     {
@@ -95,7 +93,7 @@ namespace Dungeon.Visuals.Lighting
             _globalLightMaterial = null;
         }
 
-        // ── Inner render pass ──────────────────────────────────────────────────
+        // -- Inner render pass ----------------------------------------------------
 
         private class LightMapPass : ScriptableRenderPass
         {
@@ -111,7 +109,7 @@ namespace Dungeon.Visuals.Lighting
             private readonly Material _shadowHeightMaterial;
             private readonly Material _globalLightMaterial;
             private readonly Mesh _quadMesh;
-            // Shadow meshes from the previous frame — destroyed at the start of the next frame to avoid leaks.
+            // Shadow meshes from the previous frame - destroyed at the start of the next frame to avoid leaks.
             private readonly List<Mesh> _previousShadowMeshes = new List<Mesh>();
 
             internal LightMapPass(Material lightMaterial, Material shadowMaterial, Material shadowHeightMaterial, Material globalLightMaterial)
@@ -124,7 +122,7 @@ namespace Dungeon.Visuals.Lighting
                 _quadMesh = CreateQuadMesh();
             }
 
-            // ── Per-light shadow data ─────────────────────────────────────
+            // -- Per-light shadow data -----------------------------------------
             private struct PointLightData
             {
                 internal Vector4 QuadParams;     // NDC position and radius for the light circle
@@ -132,7 +130,7 @@ namespace Dungeon.Visuals.Lighting
                 internal Mesh ShadowHeightMesh;  // Combined shadow geometry with height encoded in vertex color
             }
 
-            // ── Pass data for RenderGraph ──────────────────────────────────
+            // -- Pass data for RenderGraph --------------------------------------
             private class PassData
             {
                 internal Material LightMaterial;
@@ -186,7 +184,7 @@ namespace Dungeon.Visuals.Lighting
 
                 Camera cam = cameraData.camera;
 
-                // ── Read global light state from Logic via GameBootstrapper ───
+                // -- Read global light state from Logic via GameBootstrapper ---
                 GameBootstrapper bootstrapper = GameBootstrapper.Instance;
                 LightingService lighting = null;
                 if (bootstrapper != null && bootstrapper.LogicWorld != null)
@@ -194,26 +192,27 @@ namespace Dungeon.Visuals.Lighting
                     bootstrapper.LogicWorld.TryGet(out lighting);
                 }
                 bool hasGlobalLight = lighting != null && lighting.GlobalLightEnabled;
-                float globalIntensity = hasGlobalLight ? lighting.GlobalIntensity : 0f;
+                float elevationAngle = hasGlobalLight ? lighting.GlobalElevationAngle : 90f;
+                float maxShadowDist = lighting != null ? lighting.MaxShadowDistance : 50f;
                 Vector2 globalLightDir = hasGlobalLight ? lighting.GlobalLightDirection : Vector2.zero;
 
-                // ── Gather shadow casters from Logic ─────────────────────────
+                // -- Gather shadow casters from Logic -------------------------
                 List<ShadowCasterRenderData> shadowCasterData = new List<ShadowCasterRenderData>();
                 if (lighting != null)
                 {
                     lighting.GetShadowCasterData(shadowCasterData);
                 }
 
-                // ── Build global directional shadow meshes ───────────────────
+                // -- Build global directional shadow meshes -------------------
                 Mesh globalShadowMesh = null;
                 Mesh globalShadowHeightMesh = null;
                 if (hasGlobalLight && shadowCasterData.Count > 0)
                 {
-                    globalShadowMesh = BuildDirectionalShadowMesh(globalLightDir, globalIntensity, shadowCasterData, cam, screenWidth, screenHeight);
-                    globalShadowHeightMesh = BuildDirectionalShadowHeightMesh(globalLightDir, globalIntensity, shadowCasterData, cam, screenWidth, screenHeight);
+                    globalShadowMesh = BuildDirectionalShadowMesh(globalLightDir, elevationAngle, maxShadowDist, shadowCasterData, cam, screenWidth, screenHeight);
+                    globalShadowHeightMesh = BuildDirectionalShadowHeightMesh(globalLightDir, elevationAngle, maxShadowDist, shadowCasterData, cam, screenWidth, screenHeight);
                 }
 
-                // ── Gather point lights from Logic ───────────────────────────
+                // -- Gather point lights from Logic ---------------------------
                 List<PointLightRenderData> pointLightRenderData = new List<PointLightRenderData>();
                 if (lighting != null)
                 {
@@ -300,7 +299,7 @@ namespace Dungeon.Visuals.Lighting
                         UnsafeCommandBuffer cmd = context.cmd;
                         Rect viewport = new Rect(0, 0, data.ScreenWidth, data.ScreenHeight);
 
-                        // ── Phase 1: Light map (base illumination, no shadows) ──
+                        // -- Phase 1: Light map (base illumination, no shadows) --
                         cmd.SetRenderTarget(data.LightMapTexture);
                         cmd.SetViewport(viewport);
 
@@ -339,7 +338,7 @@ namespace Dungeon.Visuals.Lighting
                             }
                         }
 
-                        // ── Phase 2: Shadow height map ──────────────────────────
+                        // -- Phase 2: Shadow height map --------------------------
                         cmd.SetRenderTarget(data.ShadowHeightMapTexture);
                         cmd.SetViewport(viewport);
                         cmd.ClearRenderTarget(false, true, Color.black);
@@ -372,13 +371,35 @@ namespace Dungeon.Visuals.Lighting
                 }
             }
 
-            // ── Directional shadow geometry (global light) ───────────────────────
+            // -- Shadow length from elevation angle ---------------------------
+
+            // Computes directional shadow length for a caster of given maxHeight.
+            private static float ComputeDirectionalShadowLength(float maxHeight, float elevationAngle, float maxShadowDist)
+            {
+                if (elevationAngle >= 89.9f) { return 0f; }
+                if (elevationAngle <= 0.1f) { return maxShadowDist; }
+                float tanAngle = Mathf.Tan(elevationAngle * Mathf.Deg2Rad);
+                return Mathf.Min(maxHeight / tanAngle, maxShadowDist);
+            }
+
+            // Computes point light shadow extrusion distance for a single vertex.
+            // Uses similar triangles: if light is above the caster, shadow is finite.
+            private static float ComputePointShadowExtrusion(float distFromLight, float lightHeight, float casterMaxHeight)
+            {
+                if (lightHeight > casterMaxHeight && casterMaxHeight > 0f)
+                {
+                    float extrusion = distFromLight * casterMaxHeight / (lightHeight - casterMaxHeight);
+                    return Mathf.Min(extrusion, POINT_SHADOW_EXTRUDE_DISTANCE);
+                }
+                return POINT_SHADOW_EXTRUDE_DISTANCE;
+            }
+
+            // -- Directional shadow geometry (global light) -------------------
 
             // Builds a combined directional shadow mesh for all shadow casters.
-            // Shadows are parallel, cast in the direction opposite to globalLightDir,
-            // with length = MaxShadowLength × intensity.
+            // Shadow length is derived from caster height and sun elevation angle.
             private Mesh BuildDirectionalShadowMesh(
-                Vector2 globalLightDir, float intensity,
+                Vector2 globalLightDir, float elevationAngle, float maxShadowDist,
                 List<ShadowCasterRenderData> shadowCasters,
                 Camera cam, int screenWidth, int screenHeight)
             {
@@ -392,7 +413,7 @@ namespace Dungeon.Visuals.Lighting
                     Vector2[][] worldPaths = caster.WorldPaths;
                     if (worldPaths == null) { continue; }
 
-                    float shadowLength = caster.MaxShadowLength * intensity;
+                    float shadowLength = ComputeDirectionalShadowLength(caster.MaxHeight, elevationAngle, maxShadowDist);
                     if (shadowLength <= 0f) { continue; }
 
                     for (int p = 0; p < worldPaths.Length; p++)
@@ -453,6 +474,7 @@ namespace Dungeon.Visuals.Lighting
                     Vector2 extrudedB = b + shadowDir * shadowLength;
 
                     // Build quad (two triangles).
+                    // Vertex order: edge-a, edge-b, tip-b, tip-a (important for height coloring).
                     int baseIndex = vertices.Count;
                     vertices.Add(WorldXZToNDC(a, cam, screenWidth, screenHeight));
                     vertices.Add(WorldXZToNDC(b, cam, screenWidth, screenHeight));
@@ -469,10 +491,10 @@ namespace Dungeon.Visuals.Lighting
                 }
             }
 
-            // ── Radial shadow geometry (point lights) ────────────────────────────
+            // -- Radial shadow geometry (point lights) ------------------------
 
             // Builds a combined radial shadow mesh for all shadow casters relevant to a given point light.
-            // Returns null if no shadow geometry is needed.
+            // Shadow extrusion is height-aware: if the light is above the caster, the shadow is finite.
             private Mesh BuildRadialShadowMesh(
                 Vector2 lightPosXZ, float lightRadius, float lightHeight,
                 List<ShadowCasterRenderData> shadowCasters,
@@ -486,9 +508,6 @@ namespace Dungeon.Visuals.Lighting
                     ShadowCasterRenderData caster = shadowCasters[c];
                     Vector2[][] worldPaths = caster.WorldPaths;
                     if (worldPaths == null) { continue; }
-
-                    // Skip casters that are shorter than or equal to the light height.
-                    if (caster.Height <= lightHeight) { continue; }
 
                     for (int p = 0; p < worldPaths.Length; p++)
                     {
@@ -507,8 +526,9 @@ namespace Dungeon.Visuals.Lighting
                             AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
                         }
 
-                        // Find back-facing edges and extrude radial shadow fins.
-                        AddRadialShadowFins(worldPoints, lightPosXZ, cam, screenWidth, screenHeight, vertices, triangles);
+                        // Find back-facing edges and extrude radial shadow fins with height-aware extrusion.
+                        AddRadialShadowFins(worldPoints, lightPosXZ, lightHeight, caster.MaxHeight,
+                            cam, screenWidth, screenHeight, vertices, triangles);
                     }
                 }
 
@@ -524,9 +544,11 @@ namespace Dungeon.Visuals.Lighting
             }
 
             // Finds back-facing edges of the polygon relative to a point light and
-            // extrudes radial shadow fin quads (vertices pushed away from the light).
+            // extrudes radial shadow fin quads. Extrusion distance is height-aware:
+            // when the light is above the caster, the shadow has finite length based on
+            // the distance from the light, light height, and caster height (similar triangles).
             private static void AddRadialShadowFins(
-                Vector2[] worldPoints, Vector2 lightPosXZ,
+                Vector2[] worldPoints, Vector2 lightPosXZ, float lightHeight, float casterMaxHeight,
                 Camera cam, int screenWidth, int screenHeight,
                 List<Vector3> vertices, List<int> triangles)
             {
@@ -553,12 +575,19 @@ namespace Dungeon.Visuals.Lighting
                     }
 
                     // Radial extrusion: each vertex pushed away from the light position.
-                    Vector2 dirA = (a - lightPosXZ).normalized;
-                    Vector2 dirB = (b - lightPosXZ).normalized;
-                    Vector2 extrudedA = a + dirA * POINT_SHADOW_EXTRUDE_DISTANCE;
-                    Vector2 extrudedB = b + dirB * POINT_SHADOW_EXTRUDE_DISTANCE;
+                    // Extrusion distance depends on light height vs caster height.
+                    float distA = Vector2.Distance(a, lightPosXZ);
+                    float distB = Vector2.Distance(b, lightPosXZ);
+                    float extrudeA = ComputePointShadowExtrusion(distA, lightHeight, casterMaxHeight);
+                    float extrudeB = ComputePointShadowExtrusion(distB, lightHeight, casterMaxHeight);
+
+                    Vector2 dirA = distA > 0.001f ? (a - lightPosXZ) / distA : Vector2.up;
+                    Vector2 dirB = distB > 0.001f ? (b - lightPosXZ) / distB : Vector2.up;
+                    Vector2 extrudedA = a + dirA * extrudeA;
+                    Vector2 extrudedB = b + dirB * extrudeB;
 
                     // Build quad (two triangles).
+                    // Vertex order: edge-a, edge-b, tip-b, tip-a (important for height coloring).
                     int baseIndex = vertices.Count;
                     vertices.Add(WorldXZToNDC(a, cam, screenWidth, screenHeight));
                     vertices.Add(WorldXZToNDC(b, cam, screenWidth, screenHeight));
@@ -575,12 +604,13 @@ namespace Dungeon.Visuals.Lighting
                 }
             }
 
-            // ── Shadow height geometry (encodes caster height in vertex color) ────
+            // -- Shadow height geometry (encodes caster height in vertex color) ---
 
             // Builds directional shadow geometry with height encoded in vertex colors.
-            // Same shape as BuildDirectionalShadowMesh but with per-caster height in vertex color R.
+            // Occluder polygon vertices: height = maxHeight (full shadow height).
+            // Shadow fin vertices: edge = maxHeight, tip = 0 (linear interpolation by GPU).
             private Mesh BuildDirectionalShadowHeightMesh(
-                Vector2 globalLightDir, float intensity,
+                Vector2 globalLightDir, float elevationAngle, float maxShadowDist,
                 List<ShadowCasterRenderData> shadowCasters,
                 Camera cam, int screenWidth, int screenHeight)
             {
@@ -595,31 +625,41 @@ namespace Dungeon.Visuals.Lighting
                     Vector2[][] worldPaths = caster.WorldPaths;
                     if (worldPaths == null) { continue; }
 
-                    float shadowLength = caster.MaxShadowLength * intensity;
+                    float shadowLength = ComputeDirectionalShadowLength(caster.MaxHeight, elevationAngle, maxShadowDist);
                     if (shadowLength <= 0f) { continue; }
 
-                    float normalizedHeight = Mathf.Clamp01(caster.Height / MAX_SHADOW_HEIGHT);
-                    Color heightColor = new Color(normalizedHeight, 0f, 0f, 1f);
+                    float normalizedHeight = Mathf.Clamp01(caster.MaxHeight / MAX_SHADOW_HEIGHT);
+                    Color edgeHeightColor = new Color(normalizedHeight, 0f, 0f, 1f);
+                    Color tipHeightColor = new Color(0f, 0f, 0f, 1f);
 
                     for (int p = 0; p < worldPaths.Length; p++)
                     {
                         Vector2[] worldPoints = worldPaths[p];
                         if (worldPoints == null || worldPoints.Length < 3) { continue; }
 
-                        int vertsBefore = vertices.Count;
-
                         // Add caster polygon as solid occluder (skipped for sprite-based casters).
+                        // All occluder vertices get full shadow height.
                         if (!caster.SkipOccluder)
                         {
+                            int occluderStart = vertices.Count;
                             AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                            for (int v = occluderStart; v < vertices.Count; v++)
+                            {
+                                colors.Add(edgeHeightColor);
+                            }
                         }
-                        // Add directional shadow fins.
-                        AddDirectionalShadowFins(worldPoints, shadowDir, shadowLength, cam, screenWidth, screenHeight, vertices, triangles);
 
-                        // Fill vertex colors for all new vertices.
-                        for (int v = vertsBefore; v < vertices.Count; v++)
+                        // Add directional shadow fins.
+                        // Fin vertices come in groups of 4: edge-a, edge-b, tip-b, tip-a.
+                        int finsStart = vertices.Count;
+                        AddDirectionalShadowFins(worldPoints, shadowDir, shadowLength, cam, screenWidth, screenHeight, vertices, triangles);
+                        int finsAdded = vertices.Count - finsStart;
+                        for (int v = 0; v < finsAdded; v += 4)
                         {
-                            colors.Add(heightColor);
+                            colors.Add(edgeHeightColor);  // edge-a
+                            colors.Add(edgeHeightColor);  // edge-b
+                            colors.Add(tipHeightColor);   // tip-b
+                            colors.Add(tipHeightColor);   // tip-a
                         }
                     }
                 }
@@ -634,6 +674,7 @@ namespace Dungeon.Visuals.Lighting
             }
 
             // Builds radial shadow geometry with height encoded in vertex colors.
+            // Same per-vertex height interpolation as directional shadows.
             private Mesh BuildRadialShadowHeightMesh(
                 Vector2 lightPosXZ, float lightRadius, float lightHeight,
                 List<ShadowCasterRenderData> shadowCasters,
@@ -649,11 +690,9 @@ namespace Dungeon.Visuals.Lighting
                     Vector2[][] worldPaths = caster.WorldPaths;
                     if (worldPaths == null) { continue; }
 
-                    // Skip casters that are shorter than or equal to the light height.
-                    if (caster.Height <= lightHeight) { continue; }
-
-                    float normalizedHeight = Mathf.Clamp01(caster.Height / MAX_SHADOW_HEIGHT);
-                    Color heightColor = new Color(normalizedHeight, 0f, 0f, 1f);
+                    float normalizedHeight = Mathf.Clamp01(caster.MaxHeight / MAX_SHADOW_HEIGHT);
+                    Color edgeHeightColor = new Color(normalizedHeight, 0f, 0f, 1f);
+                    Color tipHeightColor = new Color(0f, 0f, 0f, 1f);
 
                     for (int p = 0; p < worldPaths.Length; p++)
                     {
@@ -665,20 +704,28 @@ namespace Dungeon.Visuals.Lighting
                         float distance = Vector2.Distance(lightPosXZ, centroid);
                         if (distance > lightRadius + casterExtent + POINT_SHADOW_EXTRUDE_DISTANCE) { continue; }
 
-                        int vertsBefore = vertices.Count;
-
                         // Add the caster polygon as solid occluder (skipped for sprite-based casters).
                         if (!caster.SkipOccluder)
                         {
+                            int occluderStart = vertices.Count;
                             AddPolygonToMesh(worldPoints, cam, screenWidth, screenHeight, vertices, triangles);
+                            for (int v = occluderStart; v < vertices.Count; v++)
+                            {
+                                colors.Add(edgeHeightColor);
+                            }
                         }
-                        // Add radial shadow fins.
-                        AddRadialShadowFins(worldPoints, lightPosXZ, cam, screenWidth, screenHeight, vertices, triangles);
 
-                        // Fill vertex colors for all new vertices.
-                        for (int v = vertsBefore; v < vertices.Count; v++)
+                        // Add radial shadow fins with height-aware extrusion.
+                        int finsStart = vertices.Count;
+                        AddRadialShadowFins(worldPoints, lightPosXZ, lightHeight, caster.MaxHeight,
+                            cam, screenWidth, screenHeight, vertices, triangles);
+                        int finsAdded = vertices.Count - finsStart;
+                        for (int v = 0; v < finsAdded; v += 4)
                         {
-                            colors.Add(heightColor);
+                            colors.Add(edgeHeightColor);  // edge-a
+                            colors.Add(edgeHeightColor);  // edge-b
+                            colors.Add(tipHeightColor);   // tip-b
+                            colors.Add(tipHeightColor);   // tip-a
                         }
                     }
                 }
@@ -692,7 +739,7 @@ namespace Dungeon.Visuals.Lighting
                 return mesh;
             }
 
-            // ── Shared helpers ───────────────────────────────────────────────────
+            // -- Shared helpers -----------------------------------------------
 
             // Estimates the maximum distance from the caster center to any of its polygon vertices.
             private static float EstimateCasterExtent(Vector2[] worldPoints, Vector2 center)

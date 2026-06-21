@@ -10,17 +10,24 @@ namespace Dungeon.Logic.Services
     {
         public bool GlobalLightEnabled;
 
+        [Tooltip("Azimuth direction the light comes FROM on the XZ plane (degrees).")]
         [Range(0f, 360f)]
         public float GlobalLightAngle;
 
-        [Range(0f, 1f)]
-        public float GlobalLightIntensity;
+        [Tooltip("Sun elevation above the horizon (degrees). 0 = horizon (very long shadows), 90 = directly overhead (no shadows).")]
+        [Range(0f, 90f)]
+        public float GlobalElevationAngle;
+
+        [Tooltip("Maximum shadow distance cap to prevent infinitely long shadows at low sun angles.")]
+        [Min(1f)]
+        public float MaxShadowDistance;
 
         public static LightingConfig Default => new LightingConfig
         {
             GlobalLightEnabled = true,
             GlobalLightAngle = 225f,
-            GlobalLightIntensity = 0.8f,
+            GlobalElevationAngle = 45f,
+            MaxShadowDistance = 50f,
         };
     }
 
@@ -30,9 +37,17 @@ namespace Dungeon.Logic.Services
         // One or more polygon paths. For simple shapes this is a single path.
         // For shapes with holes, additional paths represent cutouts.
         public Vector2[][] WorldPaths;
-        public float MaxShadowLength;
-        public float Height;
-        // When true, the caster polygon itself is not rendered as a solid shadow occluder —
+
+        // Height profile — determines shadow length and per-pixel height.
+        public float GroundOffset;
+        public float TotalHeight;
+        public float HeightStart; // normalized 0-1 on sprite Y axis
+        public float HeightEnd;   // normalized 0-1 on sprite Y axis
+
+        // Maximum height of this caster (GroundOffset + TotalHeight).
+        public float MaxHeight => GroundOffset + TotalHeight;
+
+        // When true, the caster polygon itself is not rendered as a solid shadow occluder -
         // only the shadow fins are drawn. Used for sprite-based casters where the sprite
         // provides visual coverage and the polygon occluder would darken transparent areas.
         public bool SkipOccluder;
@@ -49,7 +64,7 @@ namespace Dungeon.Logic.Services
     // Logic service: global directional light state, per-tile lighting queries,
     // and render data extraction for the visual layer.
     //
-    // Shadow casters and light sources are WorldObject features — this service
+    // Shadow casters and light sources are WorldObject features - this service
     // iterates registered WorldObjects via WorldObjectService.
     public class LightingService : ILogicService
     {
@@ -57,15 +72,16 @@ namespace Dungeon.Logic.Services
 
         private bool _globalLightEnabled;
         private float _globalAngleDegrees;
-        private float _globalIntensity;
+        private float _globalElevationAngle;
+        private float _maxShadowDistance;
 
         private WorldObjectService _objects;
         private GridService _grid;
 
-        // Fired when global light direction or intensity changes.
+        // Fired when global light direction or elevation changes.
         public event Action OnGlobalLightChanged;
 
-        // ── Global light state ───────────────────────────────────────────────
+        // -- Global light state ---------------------------------------------------
 
         public bool GlobalLightEnabled
         {
@@ -89,24 +105,29 @@ namespace Dungeon.Logic.Services
             }
         }
 
-        public float GlobalIntensity
+        // Sun elevation above the horizon in degrees.
+        // 0 = at horizon (very long shadows), 90 = directly overhead (no shadows).
+        public float GlobalElevationAngle
         {
-            get => _globalIntensity;
+            get => _globalElevationAngle;
             set
             {
-                float clamped = Mathf.Clamp01(value);
-                if (Mathf.Approximately(_globalIntensity, clamped)) { return; }
-                _globalIntensity = clamped;
+                float clamped = Mathf.Clamp(value, 0f, 90f);
+                if (Mathf.Approximately(_globalElevationAngle, clamped)) { return; }
+                _globalElevationAngle = clamped;
                 OnGlobalLightChanged?.Invoke();
             }
         }
+
+        // Global cap on shadow distance to prevent infinitely long shadows at low sun angles.
+        public float MaxShadowDistance => _maxShadowDistance;
 
         // Normalized direction vector the light comes FROM on the XZ plane.
         public Vector2 GlobalLightDirection => new Vector2(
             Mathf.Cos(_globalAngleDegrees * Mathf.Deg2Rad),
             Mathf.Sin(_globalAngleDegrees * Mathf.Deg2Rad));
 
-        // ── Constructor ──────────────────────────────────────────────────────
+        // -- Constructor ----------------------------------------------------------
 
         public LightingService(LightingConfig config)
         {
@@ -117,14 +138,27 @@ namespace Dungeon.Logic.Services
         {
             _globalLightEnabled = _config.GlobalLightEnabled;
             _globalAngleDegrees = _config.GlobalLightAngle;
-            _globalIntensity = _config.GlobalLightIntensity;
+            _globalElevationAngle = _config.GlobalElevationAngle;
+            _maxShadowDistance = _config.MaxShadowDistance;
             _objects = world.Get<WorldObjectService>();
             _grid = world.Get<GridService>();
         }
 
         public void Tick(float deltaTime) { }
 
-        // ── Render data extraction ───────────────────────────────────────────
+        // -- Shadow length calculation --------------------------------------------
+
+        // Computes the directional shadow length on the ground for a caster of given max height.
+        // Shadow length = maxHeight / tan(elevationAngle), capped at MaxShadowDistance.
+        public float GetDirectionalShadowLength(float maxHeight)
+        {
+            if (_globalElevationAngle >= 89.9f) { return 0f; }
+            if (_globalElevationAngle <= 0.1f) { return _maxShadowDistance; }
+            float tanAngle = Mathf.Tan(_globalElevationAngle * Mathf.Deg2Rad);
+            return Mathf.Min(maxHeight / tanAngle, _maxShadowDistance);
+        }
+
+        // -- Render data extraction -----------------------------------------------
         // Used by the visual layer's renderer feature to build shadow/light meshes.
 
         public void GetShadowCasterData(List<ShadowCasterRenderData> output)
@@ -139,11 +173,20 @@ namespace Dungeon.Logic.Services
                 Vector2[][] worldPaths = caster.GetWorldPaths(obj.WorldPosition);
                 if (worldPaths == null || worldPaths.Length == 0) { continue; }
 
+                // Read height profile from the same WorldObject (defaults if absent).
+                obj.TryGetFeature<HeightProfile>(out HeightProfile heightProfile);
+                float groundOffset = heightProfile?.GroundOffset ?? 0f;
+                float totalHeight = heightProfile?.TotalHeight ?? 1f;
+                float heightStart = heightProfile?.HeightStart ?? 0f;
+                float heightEnd = heightProfile?.HeightEnd ?? 1f;
+
                 output.Add(new ShadowCasterRenderData
                 {
                     WorldPaths = worldPaths,
-                    MaxShadowLength = caster.MaxShadowLength,
-                    Height = caster.Height,
+                    GroundOffset = groundOffset,
+                    TotalHeight = totalHeight,
+                    HeightStart = heightStart,
+                    HeightEnd = heightEnd,
                     SkipOccluder = caster.SkipOccluder,
                 });
             }
@@ -167,7 +210,7 @@ namespace Dungeon.Logic.Services
             }
         }
 
-        // ── Per-tile lighting query ──────────────────────────────────────────
+        // -- Per-tile lighting query ----------------------------------------------
 
         public TileLightState GetTileLightState(int x, int z)
         {
@@ -195,7 +238,7 @@ namespace Dungeon.Logic.Services
         private bool IsPointLit(float px, float pz)
         {
             // Check global light.
-            if (_globalIntensity > 0f)
+            if (_globalElevationAngle < 89.9f)
             {
                 bool inGlobalShadow = false;
                 Vector2 lightDir = GlobalLightDirection;
@@ -208,7 +251,10 @@ namespace Dungeon.Logic.Services
                     Vector2[][] worldPaths = caster.GetWorldPaths(obj.WorldPosition);
                     if (worldPaths == null) { continue; }
 
-                    float maxDist = caster.MaxShadowLength * _globalIntensity;
+                    // Shadow length derived from height profile and sun elevation.
+                    obj.TryGetFeature<HeightProfile>(out HeightProfile hp);
+                    float maxHeight = hp?.MaxHeight ?? 1f;
+                    float maxDist = GetDirectionalShadowLength(maxHeight);
                     if (IsPointInDirectionalShadow(px, pz, lightDir, worldPaths, maxDist))
                     {
                         inGlobalShadow = true;
@@ -230,7 +276,7 @@ namespace Dungeon.Logic.Services
                 float dz = pz - lightPos.y;
                 if (dx * dx + dz * dz > light.Radius * light.Radius) { continue; }
 
-                // Point is within light radius — check if any caster blocks it.
+                // Point is within light radius - check if any caster blocks it.
                 bool blocked = false;
                 foreach (KeyValuePair<int, WorldObject> kvp2 in _objects.All)
                 {
@@ -253,7 +299,7 @@ namespace Dungeon.Logic.Services
             return false;
         }
 
-        // ── 2D shadow geometry tests ─────────────────────────────────────────
+        // -- 2D shadow geometry tests ---------------------------------------------
 
         // Tests if a point is in the directional shadow of a set of polygon paths.
         // Uses even-odd rule: counts ray-edge intersections across all paths.
@@ -335,7 +381,7 @@ namespace Dungeon.Logic.Services
             float sz = bz - az;
             float denom = dx * sz - dz * sx;
 
-            // Parallel — no intersection.
+            // Parallel - no intersection.
             if (denom > -0.0001f && denom < 0.0001f) { return -1f; }
 
             float t = ((ax - ox) * sz - (az - oz) * sx) / denom;

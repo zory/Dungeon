@@ -12,14 +12,18 @@ namespace Dungeon.Visuals.Authoring
         [Tooltip("Direction angle in degrees (0 = +X, 90 = +Z). Defines where the light comes from.")]
         [SerializeField] [Range(0f, 360f)] private float _globalLightAngle = 225f;
 
-        [Tooltip("Global light intensity. 0 = dark, 1 = fully lit with max shadow length.")]
-        [SerializeField] [Range(0f, 1f)] private float _globalLightIntensity = 0.8f;
+        [Tooltip("Sun elevation above the horizon in degrees. 0 = horizon (very long shadows), 90 = directly overhead (no shadows).")]
+        [SerializeField] [Range(0f, 90f)] private float _globalElevationAngle = 45f;
+
+        [Tooltip("Maximum shadow distance cap to prevent infinitely long shadows at low sun angles.")]
+        [SerializeField] [Min(1f)] private float _maxShadowDistance = 50f;
 
         public LightingConfig GetConfig() => new LightingConfig
         {
             GlobalLightEnabled = _globalLightEnabled,
             GlobalLightAngle = _globalLightAngle,
-            GlobalLightIntensity = _globalLightIntensity,
+            GlobalElevationAngle = _globalElevationAngle,
+            MaxShadowDistance = _maxShadowDistance,
         };
 
         private void Update()
@@ -30,7 +34,7 @@ namespace Dungeon.Visuals.Authoring
 
             lighting.GlobalLightEnabled = _globalLightEnabled;
             lighting.GlobalAngleDegrees = _globalLightAngle;
-            lighting.GlobalIntensity = _globalLightIntensity;
+            lighting.GlobalElevationAngle = _globalElevationAngle;
         }
     }
 }
