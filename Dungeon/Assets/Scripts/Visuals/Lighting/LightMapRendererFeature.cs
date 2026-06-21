@@ -170,7 +170,7 @@ namespace Dungeon.Visuals.Lighting
                 {
                     bootstrapper.LogicWorld.TryGet(out lighting);
                 }
-                bool hasGlobalLight = lighting != null && lighting.GlobalIntensity > 0f;
+                bool hasGlobalLight = lighting != null && lighting.GlobalLightEnabled;
                 float globalIntensity = hasGlobalLight ? lighting.GlobalIntensity : 0f;
                 Vector2 globalLightDir = hasGlobalLight ? lighting.GlobalLightDirection : Vector2.zero;
 
@@ -280,8 +280,8 @@ namespace Dungeon.Visuals.Lighting
 
                         if (!anyLight)
                         {
-                            // No lights at all: clear to white (fully lit fallback).
-                            cmd.ClearRenderTarget(false, true, Color.white);
+                            // No lights active: everything is in darkness.
+                            cmd.ClearRenderTarget(false, true, Color.black);
                         }
                         else
                         {

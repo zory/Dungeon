@@ -195,13 +195,14 @@ Shader "Dungeon/DualGridTile"
                 }
 
                 // Binary lighting: sample the global light map using screen UV.
-                // SV_POSITION gives pixel coordinates in the fragment shader,
-                // so dividing by screen dimensions yields a [0,1] screen UV.
                 float2 screenUV = i.positionCS.xy / _LightMapParams.xy;
                 half lit = step(0.5h, SAMPLE_TEXTURE2D(_LightMap, sampler_point_clamp, screenUV).r);
 
-                // Lit: normal tinted appearance.  Unlit: inverted RGB (white outlines on black).
-                half3 unlitRGB = 1.0h - result.rgb;
+                // Lit: normal tinted appearance.
+                // Unlit: only outlines (dark pixels) shown as white; everything else pitch black.
+                half lum = dot(result.rgb, half3(0.299h, 0.587h, 0.114h));
+                half isOutline = 1.0h - step(0.1h, lum);
+                half3 unlitRGB = half3(isOutline, isOutline, isOutline);
                 result.rgb = lerp(unlitRGB, result.rgb, lit);
 
                 return result;

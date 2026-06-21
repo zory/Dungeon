@@ -8,6 +8,8 @@ namespace Dungeon.Logic.Services
     [Serializable]
     public struct LightingConfig
     {
+        public bool GlobalLightEnabled;
+
         [Range(0f, 360f)]
         public float GlobalLightAngle;
 
@@ -16,6 +18,7 @@ namespace Dungeon.Logic.Services
 
         public static LightingConfig Default => new LightingConfig
         {
+            GlobalLightEnabled = true,
             GlobalLightAngle = 225f,
             GlobalLightIntensity = 0.8f,
         };
@@ -44,6 +47,7 @@ namespace Dungeon.Logic.Services
     {
         private readonly LightingConfig _config;
 
+        private bool _globalLightEnabled;
         private float _globalAngleDegrees;
         private float _globalIntensity;
 
@@ -54,6 +58,17 @@ namespace Dungeon.Logic.Services
         public event Action OnGlobalLightChanged;
 
         // ── Global light state ───────────────────────────────────────────────
+
+        public bool GlobalLightEnabled
+        {
+            get => _globalLightEnabled;
+            set
+            {
+                if (_globalLightEnabled == value) { return; }
+                _globalLightEnabled = value;
+                OnGlobalLightChanged?.Invoke();
+            }
+        }
 
         public float GlobalAngleDegrees
         {
@@ -92,6 +107,7 @@ namespace Dungeon.Logic.Services
 
         public void Initialize(LogicWorld world)
         {
+            _globalLightEnabled = _config.GlobalLightEnabled;
             _globalAngleDegrees = _config.GlobalLightAngle;
             _globalIntensity = _config.GlobalLightIntensity;
             _objects = world.Get<WorldObjectService>();
